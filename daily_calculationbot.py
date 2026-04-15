@@ -838,10 +838,10 @@ class TelegramBot:
                 self.save(cid); return r
             return (
                 "\U0001f914 *Hmm, tushunmadim...*\n\n"
-                "Xavotir olmang! Mana misollar:\n\n"
-                "\U0001f4b8 _hot-dog uchun 20000 to'ladim_ \U0001f32d\n"
-                "\U0001f4b0 _maosh 5000000 oldim_ \U0001f4bc\n"
-                "\U0001f4cb _ertaga universitetga borish kerak_ \U0001f393\n\n"
+                "\n\n"
+                "\U0001f4b8  \U0001f32d\n"
+                "\U0001f4b0  \U0001f4bc\n"
+                "\U0001f4cb  \U0001f393\n\n"
                 "Yoki menyuni oching: /menu \U0001f60a"
             )
         ensure_today(data); r = add_transaction(tx_type, amount, desc, data)
@@ -888,8 +888,8 @@ class TelegramBot:
             "  _hot-dog uchun 20000 to'ladim_ \U0001f32d\n"
             "  _maosh 5000000 oldim_ \U0001f4bc\n\n"
             "Yoki buyruqlar:\n"
-            "  `/xarajat 20000 hot-dog`\n"
-            "  `/daromad 500000 maosh`\n\n"
+            "  ``\n"
+            "  ``\n\n"
             "\u2501\u2501\u2501\u2501 \U0001f4cb *Vazifalar* \u2501\u2501\u2501\u2501\n"
             "  `/vazifa <matn>` \u2014 Qo'shish \u270d\ufe0f\n"
             "  `/todos` \u2014 Ko'rish \U0001f440\n"

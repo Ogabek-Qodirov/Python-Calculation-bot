@@ -841,13 +841,14 @@ class TelegramBot:
                 "\n\n"
                 "\U0001f4b8  \U0001f32d\n"
                 "\U0001f4b0  \U0001f4bc\n"
-                "\U0001f4cb  \U0001f393\n\n"
+                "\U0001f4cb  kerak_ \U0001f393\n\n"
                 "Yoki menyuni oching: /menu \U0001f60a"
             )
         ensure_today(data); r = add_transaction(tx_type, amount, desc, data)
         self.save(cid); return r
 
     # ── Excel sender ──────────────────────────────────────────────────────
+    
     def do_excel(self, cid, data, period):
         if not EXCEL_AVAILABLE:
             self.send_msg(cid,

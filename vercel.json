@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "daily_calculationbot.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "daily_calculationbot.py"
+    }
+  ]
+}

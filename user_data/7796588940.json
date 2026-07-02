@@ -1,0 +1,28 @@
+{
+    "2026-03-15": {
+        "total_income": 0,
+        "total_expense": 0,
+        "balance": 0,
+        "transactions": [
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "Dokonga borishim kerak",
+                "timestamp": "2026-03-15T22:42:40.123062"
+            },
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "Sumkaga narsalarni solib tayyorlanish",
+                "timestamp": "2026-03-15T22:43:05.917149"
+            },
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "ertang uydan 400 ming olib getishim garak",
+                "timestamp": "2026-03-15T22:44:43.084768"
+            }
+        ],
+        "todos": []
+    }
+}

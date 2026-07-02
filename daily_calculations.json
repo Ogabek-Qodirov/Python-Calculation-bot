@@ -1,0 +1,69 @@
+{
+    "2026-03-13": {
+        "total_income": 10200000.0,
+        "total_expense": 2009.0,
+        "balance": 10197991.0,
+        "transactions": [
+            {
+                "type": "income",
+                "amount": 100000.0,
+                "timestamp": "2026-03-13T03:30:36.897610"
+            },
+            {
+                "type": "income",
+                "amount": 100000.0,
+                "timestamp": "2026-03-13T03:33:36.995539"
+            },
+            {
+                "type": "income",
+                "amount": 10000000.0,
+                "timestamp": "2026-03-13T03:33:49.639612"
+            },
+            {
+                "type": "expense",
+                "amount": 2000.0,
+                "description": "i bought a coffe for 2000 sums",
+                "timestamp": "2026-03-13T03:46:56.211525"
+            },
+            {
+                "type": "expense",
+                "amount": 9.0,
+                "description": "I should have go to the university tomorrow at 9 am",
+                "timestamp": "2026-03-13T03:52:55.862261"
+            }
+        ],
+        "todos": []
+    },
+    "2026-03-15": {
+        "total_income": 0,
+        "total_expense": 0,
+        "balance": 0,
+        "transactions": [
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "I just drove a car today",
+                "timestamp": "2026-03-15T21:48:02.690048"
+            },
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "ehh",
+                "timestamp": "2026-03-15T21:48:33.571282"
+            },
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "Write Referat in German",
+                "timestamp": "2026-03-15T21:53:16.031336"
+            }
+        ],
+        "todos": [
+            {
+                "task": "Go to the supermarket",
+                "done": false,
+                "created": "2026-03-15T21:49:07.294576"
+            }
+        ]
+    }
+}

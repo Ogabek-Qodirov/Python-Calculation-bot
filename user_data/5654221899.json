@@ -1,0 +1,55 @@
+{
+    "2026-03-15": {
+        "total_income": 0,
+        "total_expense": 0,
+        "balance": 0,
+        "transactions": [
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "supermarketga borishim kerak va sovun sotib olishim kerak",
+                "timestamp": "2026-03-15T22:16:48.725107"
+            },
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "dokonga borishim kerak",
+                "timestamp": "2026-03-15T22:39:59.502253"
+            },
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "ishga borish",
+                "timestamp": "2026-03-15T23:00:44.169989"
+            }
+        ],
+        "todos": []
+    },
+    "2026-03-19": {
+        "total_income": 0,
+        "total_expense": 0,
+        "balance": 0,
+        "transactions": [
+            {
+                "type": "note",
+                "amount": 0,
+                "description": "Botni serverga ulash kerak !",
+                "timestamp": "2026-03-19T19:58:24.881216"
+            }
+        ],
+        "todos": []
+    },
+    "2026-07-02": {
+        "total_income": 0,
+        "total_expense": 0,
+        "balance": 0,
+        "transactions": [],
+        "todos": [
+            {
+                "task": "Soat 18:00 da onaga qo'ng'iroq 📞",
+                "done": false,
+                "created": "2026-07-02T00:14:14.734732"
+            }
+        ]
+    }
+}

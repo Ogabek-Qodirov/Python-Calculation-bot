@@ -15,3 +15,6 @@ A feature-rich Telegram bot built to help users manage their daily tasks and tra
 * **Framework:** `python-telegram-bot` or `aiogram` (Async Telegram Bot API)
 * **Database:** PostgreSQL / SQLite (for storing user records and logs)
 * **Data Export:** `pandas` / `openpyxl` (for Excel generation)
+
+
+If you want you can run on your devise on telegram https://my-life-pro.onrender.com/

@@ -17,4 +17,4 @@ A feature-rich Telegram bot built to help users manage their daily tasks and tra
 * **Data Export:** `pandas` / `openpyxl` (for Excel generation)
 
 
-If you want you can run on your devise on telegram https://my-life-pro.onrender.com/
+If you want you can run on your devise on telegram @dailyycalculationbot

@@ -765,7 +765,7 @@ class TelegramBot:
         elif cb == 'todo_menu':
             self.clear_state(cid)
             self.edit_msg(cid, mid,
-                "📋 *Vazifalar va Qaydlar (.md)*\n\nQuyidagi bo'limni tanlang yoki `.md` faylingizni yuklab oling:", self.kb_todo())
+                "📋 *Vazifalar va Qaydlar (.md)*\n\nKerakli bo'limni tanlang:", self.kb_todo())
 
         elif cb == 'todo_download_md':
             self.edit_msg(cid, mid,
@@ -776,7 +776,7 @@ class TelegramBot:
             period = cb.split('_', 1)[1]
             names  = {'today':'Bugun','week':'Bu Hafta','month':'Bu Oy','all':'Barchasi'}
             self.edit_msg(cid, mid,
-                f"📄 *{names.get(period, period)}* uchun `.md` fayl tayyorlandi va yuborilmoqda…",
+                f"📄 *{names.get(period, period)}* uchun `.md` fayl tayyorlandi va yuborildi!",
                 self.kb_todo())
             self.send_md_doc(cid, data, period)
 
@@ -1122,12 +1122,6 @@ class TelegramBot:
         logger.info("Webhook o'chirilmoqda...")
         self.delete_webhook(); time.sleep(1)
         logger.info("Bot ishlamoqda... To'xtatish uchun Ctrl+C bosing.")
-        self.send_msg(
-            TELEGRAM_CHAT_ID,
-            "✅ *Bot ishga tushdi.*\n\n"
-            "Menyuni ochish uchun /menu bosing 👇",
-            self.kb_main()
-        )
         while True:
             try:
                 updates = self.get_updates()

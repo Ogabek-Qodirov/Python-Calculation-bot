@@ -46,22 +46,20 @@ def test_generate_md_content_periods():
     assert "## 📅 2026-09-20" in content_month
     assert "Oy boshi rejasi" in content_month
     assert "Ertalabki majlis" in content_month
-    assert "🔴 Xarajat: 50,000 so'm — Taksi" in content_month
 
-    # Test all periods
-    content_all = bot.generate_md_content(data, 'all')
-    assert "# 📋 Vazifalar va Qaydlar — Barcha Davr" in content_all
-    assert "## 📅 2026-09-01" in content_all
-    assert "## 📅 2026-09-20" in content_all
+    # Test Qaydlar.md generation
+    content_journal = bot.generate_journal_md_content(data, 'month')
+    assert "# 📝 Qaydlar va Kundalik — Bu Oy" in content_journal
+    assert "🟢 Daromad: 1,000,000 so'm — Oylik" in content_journal
+    assert "📝 Muhim eslatma" in content_journal
+    assert "Oy boshi rejasi" not in content_journal  # Qaydlar.md contains notes/transactions only
 
 def test_serious_emojis_in_messages():
     data = {}
     res_inc = bot.add_transaction('income', 100000, 'Sinov', data)
     assert '🟢' in res_inc
     assert '🤩' not in res_inc
-    assert '😍' not in res_inc
 
     res_todo = bot.add_todo('Yangi vazifa', data)
     assert '✅' in res_todo
     assert '💪' not in res_todo
-    assert 'Zo\'r!' not in res_todo

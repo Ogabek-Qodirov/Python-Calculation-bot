@@ -359,6 +359,98 @@ def generate_md_content(data, period='today'):
     return "\n".join(lines)
 
 
+def generate_journal_md_content(data, period='today'):
+    today_dt = datetime.date.today()
+    today_str = today_dt.strftime('%Y-%m-%d')
+
+    if period == 'today':
+        dates = [today_str]
+        period_title = f"Bugun — {today_str}"
+    elif period == 'week':
+        start = today_dt - datetime.timedelta(days=today_dt.weekday())
+        dates = [(start + datetime.timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
+        period_title = f"Bu Hafta ({start.strftime('%Y-%m-%d')} — {(start + datetime.timedelta(days=6)).strftime('%Y-%m-%d')})"
+    elif period == 'month':
+        month_str = today_dt.strftime('%Y-%m')
+        dates = sorted([d for d in data if d.startswith(month_str)])
+        if not dates:
+            dates = [today_str]
+        period_title = f"Bu Oy ({month_str})"
+    else:
+        dates = sorted(data.keys())
+        if not dates:
+            dates = [today_str]
+        period_title = "Barcha Davr"
+
+    total_inc = 0
+    total_exp = 0
+
+    for d in dates:
+        if d in data:
+            day_data = data[d]
+            total_inc += day_data.get('total_income', 0)
+            total_exp += day_data.get('total_expense', 0)
+
+    net_bal = total_inc - total_exp
+    sign = '+' if net_bal >= 0 else ''
+
+    lines = [
+        f"# 📝 Qaydlar va Kundalik — {period_title}",
+        "",
+        f"**Balans:** `{sign}{net_bal:,.0f} so'm` | **Jami Daromad:** `{total_inc:,.0f} so'm` | **Jami Xarajat:** `{total_exp:,.0f} so'm`",
+        "",
+        "---",
+    ]
+
+    has_entries = False
+    for d in dates:
+        if d not in data:
+            continue
+        day_data = data[d]
+        txs = day_data.get('transactions', [])
+        if not txs:
+            continue
+
+        has_entries = True
+        lines.extend([
+            "",
+            f"## 📅 {d}",
+            "",
+        ])
+
+        for tx in txs:
+            tt   = tx.get('type', 'expense')
+            desc = tx.get('description', '')
+            amt  = tx.get('amount', 0)
+            ts   = tx.get('timestamp', '')
+            try:
+                tstr = datetime.datetime.fromisoformat(ts).strftime('%H:%M')
+            except Exception:
+                tstr = ''
+            time_prefix = f"[{tstr}] " if tstr else ""
+            if tt == 'note':
+                lines.append(f"- {time_prefix}📝 {desc}")
+            elif tt == 'income':
+                lines.append(f"- {time_prefix}🟢 Daromad: {amt:,.0f} so'm — {desc}")
+            else:
+                lines.append(f"- {time_prefix}🔴 Xarajat: {amt:,.0f} so'm — {desc}")
+
+    if not has_entries:
+        lines.extend([
+            "",
+            "_Ushbu davr uchun hech qanday qayd kiritilmadi._",
+        ])
+
+    lines.extend([
+        "",
+        "---",
+        f"*Hujjat yaratilgan vaqti: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*",
+        "*Kunlik Moliya va Vazifalar Boti*"
+    ])
+
+    return "\n".join(lines)
+
+
 def save_user_md_file(cid, data, period='today'):
     today_str = get_today()
     content = generate_md_content(data, period)
@@ -637,10 +729,21 @@ class TelegramBot:
 
     def kb_journal(self):
         return {"inline_keyboard": [
-            [{"text":"🟢 Daromad Qo'shish (+)",       "callback_data":"journal_income"}],
-            [{"text":"🔴 Xarajat Qo'shish (−)",      "callback_data":"journal_expense"}],
+            [{"text":"🟢 Daromad Qo'shish (+)",       "callback_data":"journal_income"},
+             {"text":"🔴 Xarajat Qo'shish (−)",      "callback_data":"journal_expense"}],
             [{"text":"📝 Qayd Yozish",                "callback_data":"journal_note"}],
+            [{"text":"📄 Qaydlar.md Yuklash",         "callback_data":"journal_download_md"}],
             [{"text":"🏠 Asosiy Menyu",               "callback_data":"main_menu"}],
+        ]}
+
+    def kb_journal_md_period(self):
+        return {"inline_keyboard": [
+            [{"text":"📅 Bugun (1 kun)",    "callback_data":"md_journal_today"},
+             {"text":"📅 Bu Hafta (7 kun)", "callback_data":"md_journal_week"}],
+            [{"text":"📅 Bu Oy (1 oy)",    "callback_data":"md_journal_month"},
+             {"text":"📁 Barchasi",        "callback_data":"md_journal_all"}],
+            [{"text":"⬅️ Orqaga",          "callback_data":"journal_menu"},
+             {"text":"🏠 Asosiy Menyu",    "callback_data":"main_menu"}],
         ]}
 
     def kb_changes(self, todos):
@@ -748,6 +851,18 @@ class TelegramBot:
         caption = f"📄 *Vazifalar va Qaydlar (.md)* — {period_names.get(period, period).title()}\n_{today_str}_"
         self.send_doc(cid, buf, fname, caption=caption, mime='text/markdown')
 
+    def send_journal_md_doc(self, cid, data, period='today'):
+        today_str = get_today()
+        content = generate_journal_md_content(data, period)
+        md_path = os.path.join(DATA_DIR, f"{cid}_qaydlar_{period}_{today_str}.md")
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        buf = io.BytesIO(content.encode('utf-8'))
+        period_names = {'today': 'bugun', 'week': 'hafta', 'month': 'oy', 'all': 'hammasi'}
+        fname = f"qaydlar_{period_names.get(period, period)}_{today_str}.md"
+        caption = f"📄 *Qaydlar va Kundalik (.md)* — {period_names.get(period, period).title()}\n_{today_str}_"
+        self.send_doc(cid, buf, fname, caption=caption, mime='text/markdown')
+
     # ── Callback handler ──────────────────────────────────────────────────
     def handle_cb(self, update):
         cq = update.get('callback_query')
@@ -771,6 +886,14 @@ class TelegramBot:
             self.edit_msg(cid, mid,
                 "📄 *.md Faylni Yuklab Olish*\n\nQaysi davr uchun vazifalar va qaydlar `.md` faylini yuklab olmoqchisiz?",
                 self.kb_md_period())
+
+        elif cb.startswith('md_journal_'):
+            period = cb.split('_')[2]
+            names  = {'today':'Bugun','week':'Bu Hafta','month':'Bu Oy','all':'Barchasi'}
+            self.edit_msg(cid, mid,
+                f"📄 *{names.get(period, period)}* uchun `Qaydlar.md` fayli tayyorlandi va yuborildi!",
+                self.kb_journal())
+            self.send_journal_md_doc(cid, data, period)
 
         elif cb.startswith('md_'):
             period = cb.split('_', 1)[1]
@@ -850,6 +973,11 @@ class TelegramBot:
             self.clear_state(cid)
             self.edit_msg(cid, mid,
                 "📝 *Kundalik / Qaydlar*\n\nKerakli bo'limni tanlang:", self.kb_journal())
+
+        elif cb == 'journal_download_md':
+            self.edit_msg(cid, mid,
+                "📄 *Qaydlar.md Faylini Yuklab Olish*\n\nQaysi davr uchun `.md` faylini yuklab olmoqchisiz?",
+                self.kb_journal_md_period())
 
         elif cb == 'journal_income':
             self.set_state(cid, self.STATE_JOURNAL_INCOME)
@@ -974,7 +1102,7 @@ class TelegramBot:
                     "_(Balans o'zgarmadi)_",
                     {"inline_keyboard": [
                         [{"text":"📝 Yana Qayd Yozish","callback_data":"journal_note"},
-                         {"text":"📄 .md Yuklash",     "callback_data":"todo_download_md"}],
+                         {"text":"📄 Qaydlar.md Yuklash","callback_data":"journal_download_md"}],
                         [{"text":"📝 Kundalik",        "callback_data":"journal_menu"},
                          {"text":"🏠 Asosiy",          "callback_data":"main_menu"}],
                     ]})

@@ -246,54 +246,108 @@ def delete_todo(num, data):
     removed = todos.pop(num - 1)
     return f"🗑️ #{num}-sonli vazifa o'chirildi:\n_'{removed['task']}'_"
 
-# ── Markdown (.md) File System ──────────────────────────────────────────────
-def generate_md_content(data, today=None):
-    if today is None:
-        today = get_today()
-    d = data.get(today, {'todos': [], 'transactions': [], 'balance': 0, 'total_income': 0, 'total_expense': 0})
-    todos = d.get('todos', [])
-    txs   = d.get('transactions', [])
-    bal   = d.get('balance', 0)
-    sign  = '+' if bal >= 0 else ''
+# ── Markdown (.md) Period-Based File Generator ──────────────────────────────
+def generate_md_content(data, period='today'):
+    today_dt = datetime.date.today()
+    today_str = today_dt.strftime('%Y-%m-%d')
+
+    if period == 'today':
+        dates = [today_str]
+        period_title = f"Bugun — {today_str}"
+    elif period == 'week':
+        start = today_dt - datetime.timedelta(days=today_dt.weekday())
+        dates = [(start + datetime.timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
+        period_title = f"Bu Hafta ({start.strftime('%Y-%m-%d')} — {(start + datetime.timedelta(days=6)).strftime('%Y-%m-%d')})"
+    elif period == 'month':
+        month_str = today_dt.strftime('%Y-%m')
+        dates = sorted([d for d in data if d.startswith(month_str)])
+        if not dates:
+            dates = [today_str]
+        period_title = f"Bu Oy ({month_str})"
+    else:
+        dates = sorted(data.keys())
+        if not dates:
+            dates = [today_str]
+        period_title = "Barcha Davr"
+
+    total_inc = 0
+    total_exp = 0
+    total_todos = 0
+    done_todos = 0
+
+    for d in dates:
+        if d in data:
+            day_data = data[d]
+            total_inc += day_data.get('total_income', 0)
+            total_exp += day_data.get('total_expense', 0)
+            todos_list = day_data.get('todos', [])
+            total_todos += len(todos_list)
+            done_todos += sum(1 for t in todos_list if t.get('done'))
+
+    net_bal = total_inc - total_exp
+    sign = '+' if net_bal >= 0 else ''
 
     lines = [
-        f"# 📋 Bugungi Vazifalar va Qaydlar — {today}",
+        f"# 📋 Vazifalar va Qaydlar — {period_title}",
         "",
-        f"**Kunlik Balans:** `{sign}{bal:,.0f} so'm` | **Daromad:** `{d.get('total_income',0):,.0f} so'm` | **Xarajat:** `{d.get('total_expense',0):,.0f} so'm`",
+        f"**Balans:** `{sign}{net_bal:,.0f} so'm` | **Daromad:** `{total_inc:,.0f} so'm` | **Xarajat:** `{total_exp:,.0f} so'm`",
+        f"**Vazifalar Holati:** `{done_todos}/{total_todos} bajarildi`",
         "",
-        "## 📋 Vazifalar Ro'yxati",
+        "---",
     ]
-    if todos:
-        for i, t in enumerate(todos, 1):
-            check = "x" if t.get('done') else " "
-            lines.append(f"- [{check}] {i}. {t.get('task','')}")
-    else:
-        lines.append("_Bugun hali vazifalar kiritilmadi._")
 
-    lines.extend([
-        "",
-        "## 📝 Kunlik Qaydlar va Amallar",
-    ])
+    has_entries = False
+    for d in dates:
+        if d not in data:
+            continue
+        day_data = data[d]
+        todos = day_data.get('todos', [])
+        txs   = day_data.get('transactions', [])
+        if not todos and not txs:
+            continue
 
-    if txs:
-        for tx in txs:
-            tt   = tx.get('type', 'expense')
-            desc = tx.get('description', '')
-            amt  = tx.get('amount', 0)
-            ts   = tx.get('timestamp', '')
-            try:
-                tstr = datetime.datetime.fromisoformat(ts).strftime('%H:%M')
-            except Exception:
-                tstr = ''
-            time_prefix = f"[{tstr}] " if tstr else ""
-            if tt == 'note':
-                lines.append(f"- {time_prefix}📝 {desc}")
-            elif tt == 'income':
-                lines.append(f"- {time_prefix}🟢 Daromad: {amt:,.0f} so'm — {desc}")
-            else:
-                lines.append(f"- {time_prefix}🔴 Xarajat: {amt:,.0f} so'm — {desc}")
-    else:
-        lines.append("_Bugun hali qaydlar kiritilmadi._")
+        has_entries = True
+        lines.extend([
+            "",
+            f"## 📅 {d}",
+            "",
+        ])
+
+        lines.append("### 📋 Vazifalar Ro'yxati")
+        if todos:
+            for i, t in enumerate(todos, 1):
+                check = "x" if t.get('done') else " "
+                lines.append(f"- [{check}] {i}. {t.get('task','')}")
+        else:
+            lines.append("_Vazifalar yo'q._")
+
+        lines.append("")
+        lines.append("### 📝 Qaydlar va Amallar")
+        if txs:
+            for tx in txs:
+                tt   = tx.get('type', 'expense')
+                desc = tx.get('description', '')
+                amt  = tx.get('amount', 0)
+                ts   = tx.get('timestamp', '')
+                try:
+                    tstr = datetime.datetime.fromisoformat(ts).strftime('%H:%M')
+                except Exception:
+                    tstr = ''
+                time_prefix = f"[{tstr}] " if tstr else ""
+                if tt == 'note':
+                    lines.append(f"- {time_prefix}📝 {desc}")
+                elif tt == 'income':
+                    lines.append(f"- {time_prefix}🟢 Daromad: {amt:,.0f} so'm — {desc}")
+                else:
+                    lines.append(f"- {time_prefix}🔴 Xarajat: {amt:,.0f} so'm — {desc}")
+        else:
+            lines.append("_Qaydlar yo'q._")
+
+    if not has_entries:
+        lines.extend([
+            "",
+            "_Ushbu davr uchun hech qanday vazifa yoki qayd topilmadi._",
+        ])
 
     lines.extend([
         "",
@@ -305,11 +359,10 @@ def generate_md_content(data, today=None):
     return "\n".join(lines)
 
 
-def save_user_md_file(cid, data, today=None):
-    if today is None:
-        today = get_today()
-    content = generate_md_content(data, today)
-    md_path = os.path.join(DATA_DIR, f"{cid}_vazifalar_{today}.md")
+def save_user_md_file(cid, data, period='today'):
+    today_str = get_today()
+    content = generate_md_content(data, period)
+    md_path = os.path.join(DATA_DIR, f"{cid}_vazifalar_{period}_{today_str}.md")
     with open(md_path, 'w', encoding='utf-8') as f:
         f.write(content)
     return md_path, content
@@ -572,6 +625,16 @@ class TelegramBot:
             [{"text":"🏠 Asosiy Menyu",              "callback_data":"main_menu"}],
         ]}
 
+    def kb_md_period(self):
+        return {"inline_keyboard": [
+            [{"text":"📅 Bugun (1 kun)",    "callback_data":"md_today"},
+             {"text":"📅 Bu Hafta (7 kun)", "callback_data":"md_week"}],
+            [{"text":"📅 Bu Oy (1 oy)",    "callback_data":"md_month"},
+             {"text":"📁 Barchasi",        "callback_data":"md_all"}],
+            [{"text":"⬅️ Orqaga",          "callback_data":"todo_menu"},
+             {"text":"🏠 Asosiy Menyu",    "callback_data":"main_menu"}],
+        ]}
+
     def kb_journal(self):
         return {"inline_keyboard": [
             [{"text":"🟢 Daromad Qo'shish (+)",       "callback_data":"journal_income"}],
@@ -676,13 +739,13 @@ class TelegramBot:
                           timeout=30)
         except Exception as e: logger.error(f"send_doc xato: {e}")
 
-    def send_md_doc(self, cid, data, today=None):
-        if today is None:
-            today = get_today()
-        md_path, content = save_user_md_file(cid, data, today)
+    def send_md_doc(self, cid, data, period='today'):
+        today_str = get_today()
+        md_path, content = save_user_md_file(cid, data, period)
         buf = io.BytesIO(content.encode('utf-8'))
-        fname = f"vazifalar_{today}.md"
-        caption = f"📄 *Vazifalar va Qaydlar (.md)*\n_{today}_"
+        period_names = {'today': 'bugun', 'week': 'hafta', 'month': 'oy', 'all': 'hammasi'}
+        fname = f"vazifalar_va_qaydlar_{period_names.get(period, period)}_{today_str}.md"
+        caption = f"📄 *Vazifalar va Qaydlar (.md)* — {period_names.get(period, period).title()}\n_{today_str}_"
         self.send_doc(cid, buf, fname, caption=caption, mime='text/markdown')
 
     # ── Callback handler ──────────────────────────────────────────────────
@@ -703,12 +766,19 @@ class TelegramBot:
             self.clear_state(cid)
             self.edit_msg(cid, mid,
                 "📋 *Vazifalar va Qaydlar (.md)*\n\nQuyidagi bo'limni tanlang yoki `.md` faylingizni yuklab oling:", self.kb_todo())
-            self.send_md_doc(cid, data)
 
         elif cb == 'todo_download_md':
-            self.send_md_doc(cid, data)
             self.edit_msg(cid, mid,
-                "📄 *Vazifalar (.md) fayli yuborildi!*", self.kb_todo())
+                "📄 *.md Faylni Yuklab Olish*\n\nQaysi davr uchun vazifalar va qaydlar `.md` faylini yuklab olmoqchisiz?",
+                self.kb_md_period())
+
+        elif cb.startswith('md_'):
+            period = cb.split('_', 1)[1]
+            names  = {'today':'Bugun','week':'Bu Hafta','month':'Bu Oy','all':'Barchasi'}
+            self.edit_msg(cid, mid,
+                f"📄 *{names.get(period, period)}* uchun `.md` fayl tayyorlandi va yuborilmoqda…",
+                self.kb_todo())
+            self.send_md_doc(cid, data, period)
 
         elif cb == 'todo_add':
             self.set_state(cid, self.STATE_TODO_ADD)
@@ -726,7 +796,6 @@ class TelegramBot:
                  {"text":"🏠 Asosiy Menyu",      "callback_data":"main_menu"}],
             ]}
             self.edit_msg(cid, mid, list_todos(data), bk)
-            self.send_md_doc(cid, data)
 
         elif cb == 'todo_changes':
             todos = data[get_today()]['todos']
@@ -749,7 +818,7 @@ class TelegramBot:
             todos = data[today]['todos']
             if 1 <= num <= len(todos):
                 todos[num-1]['done'] = not todos[num-1]['done']; self.save(cid)
-                save_user_md_file(cid, data, today)
+                save_user_md_file(cid, data, 'today')
             self.edit_msg(cid, mid,
                 "✏️ *Vazifalarni Boshqarish*\n\n"
                 "Holatni o'zgartirish uchun vazifani bosing (✅/⬜).\n"
@@ -761,7 +830,7 @@ class TelegramBot:
             todos = data[today]['todos']
             if 1 <= num <= len(todos):
                 todos.pop(num-1); self.save(cid)
-                save_user_md_file(cid, data, today)
+                save_user_md_file(cid, data, 'today')
             remaining = data[today]['todos']
             if remaining:
                 self.edit_msg(cid, mid,
@@ -853,7 +922,6 @@ class TelegramBot:
                 self.save(cid)
                 save_user_md_file(cid, data)
                 self.send_msg(cid, res_msg, self.kb_after_todo())
-                self.send_md_doc(cid, data)
                 return
 
             elif state == self.STATE_JOURNAL_INCOME:
@@ -900,7 +968,7 @@ class TelegramBot:
                     'timestamp': datetime.datetime.now().isoformat(),
                 })
                 self.save(cid)
-                save_user_md_file(cid, data, today)
+                save_user_md_file(cid, data, 'today')
                 self.send_msg(cid,
                     f"📝 *Eslatma saqlandi!*\n\n_{text}_\n\n"
                     "_(Balans o'zgarmadi)_",
@@ -935,16 +1003,13 @@ class TelegramBot:
         elif cmd in ('/todo','/vazifa'):
             task = text.split(' ',1)[1].strip() if ' ' in text else ''
             if not task:
-                self.send_md_doc(cid, data)
                 return ("📋 Vazifa yoki qaydingizni kiriting:\n"
                         "`/vazifa Loyihani yakunlash`\n\n"
                         "Yoki menyudan tanlang: /menu")
             ensure_today(data); r = add_todo(task, data); self.save(cid)
             save_user_md_file(cid, data)
-            self.send_md_doc(cid, data)
             return r
         elif cmd in ('/todos', '/vazifalar'):
-            self.send_md_doc(cid, data)
             return list_todos(data)
         elif cmd == '/done':
             parts = text.split()
@@ -989,7 +1054,6 @@ class TelegramBot:
                 ensure_today(data); r = add_todo(text, data)
                 self.save(cid)
                 save_user_md_file(cid, data)
-                self.send_md_doc(cid, data)
                 return r
             return (
                 "⚠️ *Noma'lum buyruq.* Mana misollar:\n\n"

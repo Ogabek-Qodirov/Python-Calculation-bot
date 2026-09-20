@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 import sys
 import json
@@ -178,25 +178,21 @@ def add_transaction(tx_type, amount, description, data):
     balance = data[today]['balance']
     sign    = '+' if balance >= 0 else ''
     if tx_type == 'income':
-        mood = '\U0001f929 Barakalla!' if amount >= 500000 else '\U0001f60a Ajoyib!'
         return (
-            f"\U0001f4b0 *Daromad qo'shildi!* {mood}\n"
-            f"\U0001f4dd _{description}_\n"
-            f"\U0001f4b5 Miqdor: *{amount:,.0f} so'm*\n\n"
-            f"\u2696\ufe0f Bugungi balans: *{sign}{balance:,.0f} so'm* "
-            + ('\U0001f60d' if balance >= 0 else '\U0001f622')
+            f"🟢 *Daromad qo'shildi!*\n"
+            f"📝 _{description}_\n"
+            f"💵 Miqdor: *{amount:,.0f} so'm*\n\n"
+            f"⚖️ Bugungi balans: *{sign}{balance:,.0f} so'm*"
         )
     else:
-        mood = "\U0001f622 Ko'p ketdi!" if amount >= 200000 else '\U0001f605 Yaxshi!'
         return (
-            f"\U0001f4b8 *Xarajat qo'shildi!* {mood}\n"
-            f"\U0001f4dd _{description}_\n"
-            f"\U0001f4b5 Miqdor: *{amount:,.0f} so'm*\n\n"
-            f"\u2696\ufe0f Bugungi balans: *{sign}{balance:,.0f} so'm* "
-            + ('\U0001f60a' if balance >= 0 else '\U0001f630')
+            f"🔴 *Xarajat qo'shildi!*\n"
+            f"📝 _{description}_\n"
+            f"💵 Miqdor: *{amount:,.0f} so'm*\n\n"
+            f"⚖️ Bugungi balans: *{sign}{balance:,.0f} so'm*"
         )
 
-# ── To-Do ───────────────────────────────────────────────────────────────────
+# ── To-Do & Markdown Notes ──────────────────────────────────────────────────
 def add_todo(task_text, data):
     today = ensure_today(data)
     todos = data[today]['todos']
@@ -204,9 +200,9 @@ def add_todo(task_text, data):
                   'created': datetime.datetime.now().isoformat()})
     idx = len(todos)
     return (
-        f"\u2705 *Vazifa qo'shildi!* \U0001f4aa\n"
+        f"✅ *Vazifa saqlandi!*\n"
         f"_{task_text}_\n\n"
-        f"\U0001f4cb Siz bugun *{idx} ta* vazifa qo'shdingiz. Zo'r!"
+        f"📋 Jami vazifalar soni: *{idx} ta*"
     )
 
 def list_todos(data):
@@ -214,42 +210,109 @@ def list_todos(data):
     todos = data[today]['todos']
     if not todos:
         return (
-            "\U0001f634 Bugun hali hech qanday vazifa yo'q!\n\n"
-            "\U0001f4a1 Kichik qadam \u2014 katta natija! Birinchi vazifangizni qo'sing \U0001f31f"
+            "📋 Bugun hali hech qanday vazifa kiritilmadi.\n\n"
+            "Yangi vazifa qo'shish uchun quyidagi tugmani bosing 👇"
         )
     done_count = sum(1 for t in todos if t['done'])
     total      = len(todos)
-    lines      = [f"\U0001f4aa *Bugungi Vazifalar* ({done_count}/{total} bajarildi)\n"]
+    lines      = [f"📋 *Bugungi Vazifalar* ({done_count}/{total} bajarildi)\n"]
     for i, t in enumerate(todos, 1):
-        check = '\u2705' if t['done'] else '\u2b1c'
+        check = '✅' if t['done'] else '⬜'
         lines.append(f"{check} {i}. {t['task']}")
     if done_count == total and total > 0:
-        lines.append("\n\U0001f389 *Barakalla! Barcha vazifalar bajarildi!* \U0001f3c6")
+        lines.append("\n✅ *Barcha vazifalar bajarildi.*")
     elif done_count > 0:
-        lines.append(f"\n\U0001f525 *{done_count} ta bajarildi, davom eting!*")
+        lines.append(f"\nℹ️ *{done_count}/{total} ta vazifa bajarildi.*")
     else:
-        lines.append("\n\U0001f4a1 _Birinchi vazifani boshlash vaqti!_")
+        lines.append("\nℹ️ _Bajarish uchun vazifani tanlang._")
     return '\n'.join(lines)
 
 def complete_todo(num, data):
     today = ensure_today(data)
     todos = data[today]['todos']
     if num < 1 or num > len(todos):
-        return f"\U0001f615 #{num} vazifa topilmadi. Sizda {len(todos)} ta vazifa bor."
+        return f"⚠️ #{num}-sonli vazifa topilmadi. Jami: {len(todos)} ta vazifa bor."
     todos[num - 1]['done'] = True
     return (
-        f"\U0001f389 *Barakalla!* #{num} vazifa bajarildi! \U0001f4aa\n\n"
-        f"\u2705 _{todos[num-1]['task']}_\n\n"
-        "Davom eting, siz zo'rsiz! \U0001f525"
+        f"✅ *#{num}-sonli vazifa bajarildi:*\n"
+        f"_{todos[num-1]['task']}_"
     )
 
 def delete_todo(num, data):
     today = ensure_today(data)
     todos = data[today]['todos']
     if num < 1 or num > len(todos):
-        return f"\U0001f615 #{num} vazifa topilmadi."
+        return f"⚠️ #{num}-sonli vazifa topilmadi."
     removed = todos.pop(num - 1)
-    return f"\U0001f5d1\ufe0f #{num} vazifa o'chirildi.\n_'{removed['task']}'_\n\n\U0001f60c Yaxshi qaror!"
+    return f"🗑️ #{num}-sonli vazifa o'chirildi:\n_'{removed['task']}'_"
+
+# ── Markdown (.md) File System ──────────────────────────────────────────────
+def generate_md_content(data, today=None):
+    if today is None:
+        today = get_today()
+    d = data.get(today, {'todos': [], 'transactions': [], 'balance': 0, 'total_income': 0, 'total_expense': 0})
+    todos = d.get('todos', [])
+    txs   = d.get('transactions', [])
+    bal   = d.get('balance', 0)
+    sign  = '+' if bal >= 0 else ''
+
+    lines = [
+        f"# 📋 Bugungi Vazifalar va Qaydlar — {today}",
+        "",
+        f"**Kunlik Balans:** `{sign}{bal:,.0f} so'm` | **Daromad:** `{d.get('total_income',0):,.0f} so'm` | **Xarajat:** `{d.get('total_expense',0):,.0f} so'm`",
+        "",
+        "## 📋 Vazifalar Ro'yxati",
+    ]
+    if todos:
+        for i, t in enumerate(todos, 1):
+            check = "x" if t.get('done') else " "
+            lines.append(f"- [{check}] {i}. {t.get('task','')}")
+    else:
+        lines.append("_Bugun hali vazifalar kiritilmadi._")
+
+    lines.extend([
+        "",
+        "## 📝 Kunlik Qaydlar va Amallar",
+    ])
+
+    if txs:
+        for tx in txs:
+            tt   = tx.get('type', 'expense')
+            desc = tx.get('description', '')
+            amt  = tx.get('amount', 0)
+            ts   = tx.get('timestamp', '')
+            try:
+                tstr = datetime.datetime.fromisoformat(ts).strftime('%H:%M')
+            except Exception:
+                tstr = ''
+            time_prefix = f"[{tstr}] " if tstr else ""
+            if tt == 'note':
+                lines.append(f"- {time_prefix}📝 {desc}")
+            elif tt == 'income':
+                lines.append(f"- {time_prefix}🟢 Daromad: {amt:,.0f} so'm — {desc}")
+            else:
+                lines.append(f"- {time_prefix}🔴 Xarajat: {amt:,.0f} so'm — {desc}")
+    else:
+        lines.append("_Bugun hali qaydlar kiritilmadi._")
+
+    lines.extend([
+        "",
+        "---",
+        f"*Hujjat yaratilgan vaqti: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*",
+        "*Kunlik Moliya va Vazifalar Boti*"
+    ])
+
+    return "\n".join(lines)
+
+
+def save_user_md_file(cid, data, today=None):
+    if today is None:
+        today = get_today()
+    content = generate_md_content(data, today)
+    md_path = os.path.join(DATA_DIR, f"{cid}_vazifalar_{today}.md")
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    return md_path, content
 
 # ── Summary ─────────────────────────────────────────────────────────────────
 def show_summary(data):
@@ -257,40 +320,38 @@ def show_summary(data):
     d       = data[today]
     balance = d['balance']
     sign    = '+' if balance >= 0 else ''
-    bal_emoji = '\U0001f60d' if balance > 100000 else ('\U0001f60a' if balance >= 0 else '\U0001f630')
     lines = [
-        f"\U0001f4ca *Bugungi Hisobot* \U0001f4c5 {today}\n",
-        f"\U0001f4b0 Daromad:  *{d['total_income']:,.0f} so'm* \U0001f929",
-        f"\U0001f4b8 Xarajat:  *{d['total_expense']:,.0f} so'm* \U0001f624",
-        f"\u2696\ufe0f Balans:   *{sign}{balance:,.0f} so'm* {bal_emoji}",
+        f"📊 *Bugungi Hisobot* — {today}\n",
+        f"💰 Daromad:  *{d['total_income']:,.0f} so'm*",
+        f"💸 Xarajat:  *{d['total_expense']:,.0f} so'm*",
+        f"⚖️ Balans:   *{sign}{balance:,.0f} so'm*",
     ]
     if d['transactions']:
-        lines.append("\n\U0001f4cb *Bugungi harakatlar:*")
+        lines.append("\n📝 *Bugungi amallar:*")
         for tx in d['transactions'][-10:]:
             tt   = tx.get('type','expense')
             desc = tx.get('description','')
             if tt == 'note':
-                lines.append(f"\U0001f4dd _(eslatma)_ {desc}")
+                lines.append(f"📝 _(eslatma)_ {desc}")
             else:
-                icon = '\U0001f7e2' if tt == 'income' else '\U0001f534'
-                lines.append(f"{icon} {tx['amount']:,.0f} so'm \u2014 _{desc}_")
+                icon = '🟢' if tt == 'income' else '🔴'
+                lines.append(f"{icon} {tx['amount']:,.0f} so'm — _{desc}_")
     if d['todos']:
         done  = sum(1 for t in d['todos'] if t['done'])
         total = len(d['todos'])
-        lines.append(f"\n\u2705 *Vazifalar:* {done}/{total} bajarildi "
-                     + ('\U0001f3c6' if done == total else '\U0001f4aa'))
+        lines.append(f"\n📋 *Vazifalar:* {done}/{total} bajarildi")
         for i, t in enumerate(d['todos'], 1):
-            check = '\u2705' if t['done'] else '\u2b1c'
+            check = '✅' if t['done'] else '⬜'
             lines.append(f"{check} {i}. {t['task']}")
     if not d['transactions'] and not d['todos']:
-        lines.append("\n\U0001f305 _Bugun hali hech narsa yo'q. Yangi kun \u2014 yangi imkoniyat!_ \u2728")
+        lines.append("\nℹ️ _Bugun hali hech qanday ma'lumot kiritilmadi._")
     return '\n'.join(lines)
 
 def show_weekly_summary(data):
     today    = datetime.date.today()
     start    = today - datetime.timedelta(days=today.weekday())
     total_in = total_ex = 0
-    lines    = ["\U0001f4ca *Haftalik Hisobot* \U0001f4c5\n"]
+    lines    = ["📊 *Haftalik Hisobot*\n"]
     for i in range(7):
         d = (start + datetime.timedelta(days=i)).strftime('%Y-%m-%d')
         if d in data:
@@ -299,15 +360,13 @@ def show_weekly_summary(data):
             total_ex += day_data['total_expense']
             bal  = day_data['balance']
             sign = '+' if bal >= 0 else ''
-            emoji = '\U0001f60a' if bal >= 0 else '\U0001f630'
-            lines.append(f"\U0001f4c5 {d}: {sign}{bal:,.0f} so'm {emoji}")
+            lines.append(f"📅 {d}: {sign}{bal:,.0f} so'm")
     bal  = total_in - total_ex
     sign = '+' if bal >= 0 else ''
     lines += [
-        f"\n\U0001f4b0 Jami Daromad:   *{total_in:,.0f} so'm* \U0001f929",
-        f"\U0001f4b8 Jami Xarajat:   *{total_ex:,.0f} so'm* \U0001f624",
-        f"\u2696\ufe0f Haftalik Balans: *{sign}{bal:,.0f} so'm* "
-        + ('\U0001f60d' if bal >= 0 else '\U0001f630'),
+        f"\n💰 Jami Daromad:   *{total_in:,.0f} so'm*",
+        f"💸 Jami Xarajat:   *{total_ex:,.0f} so'm*",
+        f"⚖️ Haftalik Balans: *{sign}{bal:,.0f} so'm*",
     ]
     return '\n'.join(lines)
 
@@ -322,11 +381,10 @@ def show_monthly_summary(data):
     bal  = total_in - total_ex
     sign = '+' if bal >= 0 else ''
     return (
-        f"\U0001f4ca *Oylik Hisobot* \U0001f5d3\ufe0f {month}\n\n"
-        f"\U0001f4b0 Daromad:  *{total_in:,.0f} so'm* \U0001f929\n"
-        f"\U0001f4b8 Xarajat:  *{total_ex:,.0f} so'm* \U0001f624\n"
-        f"\u2696\ufe0f Balans:   *{sign}{bal:,.0f} so'm* "
-        + ('\U0001f60d' if bal >= 0 else '\U0001f630')
+        f"📊 *Oylik Hisobot* — {month}\n\n"
+        f"💰 Daromad:  *{total_in:,.0f} so'm*\n"
+        f"💸 Xarajat:  *{total_ex:,.0f} so'm*\n"
+        f"⚖️ Balans:   *{sign}{bal:,.0f} so'm*"
     )
 
 # ── Excel ────────────────────────────────────────────────────────────────────
@@ -359,23 +417,23 @@ def generate_excel(data, period='today'):
 
     today = get_today()
     if period == 'today':
-        dates = [today]; title = f"Kunlik Hisobot \u2014 {today}"
+        dates = [today]; title = f"Kunlik Hisobot — {today}"
     elif period == 'week':
         base  = datetime.date.today()
         start = base - datetime.timedelta(days=base.weekday())
         dates = [(start + datetime.timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
-        title = f"Haftalik Hisobot \u2014 {start}"
+        title = f"Haftalik Hisobot — {start}"
     elif period == 'month':
         base  = datetime.date.today(); month = base.strftime('%Y-%m')
         dates = sorted([d for d in data if d.startswith(month)])
-        title = f"Oylik Hisobot \u2014 {month}"
+        title = f"Oylik Hisobot — {month}"
     else:
         dates = sorted(data.keys()); title = "Barcha Hisobot"
 
     ws = wb.active
     ws.title = "Tranzaksiyalar"; ws.sheet_properties.tabColor = "2C3E50"
     ws.merge_cells('A1:F1')
-    ws['A1'].value     = f"\U0001f4b0 {title}"
+    ws['A1'].value     = f"💰 {title}"
     ws['A1'].font      = Font(bold=True, size=14, color='FFFFFF')
     ws['A1'].fill      = header_fill; ws['A1'].alignment = center
     ws.row_dimensions[1].height = 30
@@ -398,9 +456,9 @@ def generate_excel(data, period='today'):
 
     for i, (date, tstr, tx) in enumerate(txs):
         alt = (i % 2 == 1); tt = tx.get('type','expense')
-        if tt == 'income':   running_balance += tx['amount']; lbl = "\U0001f4e5 Daromad"
-        elif tt == 'note':   lbl = "\U0001f4dd Eslatma"
-        else:                running_balance -= tx['amount']; lbl = "\U0001f4e4 Xarajat"
+        if tt == 'income':   running_balance += tx['amount']; lbl = "🟢 Daromad"
+        elif tt == 'note':   lbl = "📝 Eslatma"
+        else:                running_balance -= tx['amount']; lbl = "🔴 Xarajat"
         ws.append([date, tstr, lbl, tx['amount'] if tt != 'note' else 0,
                    tx.get('description',''), running_balance])
         for col in range(1, 7): style_cell(ws.cell(row=row_num, column=col), alt)
@@ -416,7 +474,7 @@ def generate_excel(data, period='today'):
 
     ws2 = wb.create_sheet("Hisobot"); ws2.sheet_properties.tabColor = "27AE60"
     ws2.merge_cells('A1:C1')
-    ws2['A1'].value = "\U0001f4ca Kunlar bo'yicha Hisobot"
+    ws2['A1'].value = "📊 Kunlar bo'yicha Hisobot"
     ws2['A1'].font  = Font(bold=True, size=13, color='FFFFFF')
     ws2['A1'].fill  = header_fill; ws2['A1'].alignment = center
     ws2.row_dimensions[1].height = 28
@@ -446,7 +504,7 @@ def generate_excel(data, period='today'):
 
     ws3 = wb.create_sheet("Vazifalar"); ws3.sheet_properties.tabColor = "E67E22"
     ws3.merge_cells('A1:C1')
-    ws3['A1'].value = "\u2705 Vazifalar Ro'yxati"
+    ws3['A1'].value = "📋 Vazifalar Ro'yxati"
     ws3['A1'].font  = Font(bold=True, size=13, color='FFFFFF')
     ws3['A1'].fill  = PatternFill('solid', fgColor='E67E22'); ws3['A1'].alignment = center
     ws3.row_dimensions[1].height = 28
@@ -459,7 +517,7 @@ def generate_excel(data, period='today'):
     for date in dates:
         if date in data:
             for j, todo in enumerate(data[date].get('todos',[]), 1):
-                status = '\u2705 Bajarildi' if todo['done'] else '\u2b1c Kutilmoqda'
+                status = '✅ Bajarildi' if todo['done'] else '⬜ Kutilmoqda'
                 ws3.append([j, todo['task'], status, date])
                 for col in range(1,5): style_cell(ws3.cell(row=task_row,column=col), task_row % 2 == 1)
                 ws3.cell(row=task_row,column=3).font = Font(
@@ -477,7 +535,7 @@ class TelegramBot:
         self.user_states    = {}
         self.last_update_id = 0
         self.base_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
-        logger.info("Bot ishga tushdi \u2705")
+        logger.info("Bot ishga tushdi ✅")
 
     STATE_IDLE            = 'idle'
     STATE_TODO_ADD        = 'todo_add'
@@ -499,60 +557,63 @@ class TelegramBot:
     # ── Keyboards ─────────────────────────────────────────────────────────
     def kb_main(self):
         return {"inline_keyboard": [
-            [{"text":"\U0001f4cb Vazifalar",      "callback_data":"todo_menu"},
-             {"text":"\U0001f4d3 Kundalik",        "callback_data":"journal_menu"}],
-            [{"text":"\U0001f4ca Hisobot",         "callback_data":"cmd_summary"},
-             {"text":"\U0001f4e4 Excel Yuklash",   "callback_data":"cmd_excel"}],
+            [{"text":"📋 Vazifalar (.md)",       "callback_data":"todo_menu"},
+             {"text":"📝 Qayd / Kundalik",     "callback_data":"journal_menu"}],
+            [{"text":"📊 Hisobot",             "callback_data":"cmd_summary"},
+             {"text":"📁 Excel Yuklash",       "callback_data":"cmd_excel"}],
         ]}
 
     def kb_todo(self):
         return {"inline_keyboard": [
-            [{"text":"\u2795 Vazifa Qo'shish",        "callback_data":"todo_add"}],
-            [{"text":"\U0001f4cb Vazifalarni Ko'rish", "callback_data":"todo_view"}],
-            [{"text":"\u270f\ufe0f O'zgartirish",      "callback_data":"todo_changes"}],
-            [{"text":"\U0001f3e0 Asosiy Menyu",        "callback_data":"main_menu"}],
+            [{"text":"➕ Vazifa / Qayd Qo'shish",    "callback_data":"todo_add"}],
+            [{"text":"📄 .md Faylni Yuklash",       "callback_data":"todo_download_md"}],
+            [{"text":"📋 Vazifalarni Ko'rish",       "callback_data":"todo_view"}],
+            [{"text":"✏️ O'zgartirish",              "callback_data":"todo_changes"}],
+            [{"text":"🏠 Asosiy Menyu",              "callback_data":"main_menu"}],
         ]}
 
     def kb_journal(self):
         return {"inline_keyboard": [
-            [{"text":"\U0001f4b0 Daromad Qo'shish (+)",           "callback_data":"journal_income"}],
-            [{"text":"\U0001f4b8 Xarajat Qo'shish (\u2212)",      "callback_data":"journal_expense"}],
-            [{"text":"\U0001f4dd Eslatma Yozish (o'zgarishsiz)",  "callback_data":"journal_note"}],
-            [{"text":"\U0001f3e0 Asosiy Menyu",                    "callback_data":"main_menu"}],
+            [{"text":"🟢 Daromad Qo'shish (+)",       "callback_data":"journal_income"}],
+            [{"text":"🔴 Xarajat Qo'shish (−)",      "callback_data":"journal_expense"}],
+            [{"text":"📝 Qayd Yozish",                "callback_data":"journal_note"}],
+            [{"text":"🏠 Asosiy Menyu",               "callback_data":"main_menu"}],
         ]}
 
     def kb_changes(self, todos):
         rows = []
         for i, t in enumerate(todos, 1):
-            icon  = '\u2705' if t['done'] else '\u2b1c'
-            label = t['task'][:22] + '\u2026' if len(t['task']) > 22 else t['task']
+            icon  = '✅' if t['done'] else '⬜'
+            label = t['task'][:22] + '…' if len(t['task']) > 22 else t['task']
             rows.append([
                 {"text":f"{icon} {i}. {label}", "callback_data":f"todo_toggle_{i}"},
-                {"text":"\U0001f5d1\ufe0f O'chir",  "callback_data":f"todo_del_{i}"},
+                {"text":"🗑️ O'chirish",          "callback_data":f"todo_del_{i}"},
             ])
-        rows.append([{"text":"\U0001f519 Orqaga",      "callback_data":"todo_menu"},
-                     {"text":"\U0001f3e0 Asosiy Menyu","callback_data":"main_menu"}])
+        rows.append([{"text":"⬅️ Orqaga",            "callback_data":"todo_menu"},
+                     {"text":"🏠 Asosiy Menyu",      "callback_data":"main_menu"}])
         return {"inline_keyboard": rows}
 
     def kb_back(self):
-        return {"inline_keyboard": [[{"text":"\U0001f3e0 Asosiy Menyu","callback_data":"main_menu"}]]}
+        return {"inline_keyboard": [[{"text":"🏠 Asosiy Menyu","callback_data":"main_menu"}]]}
 
     def kb_after_todo(self):
         return {"inline_keyboard": [
-            [{"text":"\u2795 Yana Qo'shish",          "callback_data":"todo_add"}],
-            [{"text":"\U0001f4cb Vazifalarni Ko'rish", "callback_data":"todo_view"}],
-            [{"text":"\U0001f3e0 Asosiy Menyu",        "callback_data":"main_menu"}],
+            [{"text":"➕ Yana Qo'shish",              "callback_data":"todo_add"},
+             {"text":"📄 .md Yuklash",                "callback_data":"todo_download_md"}],
+            [{"text":"📋 Vazifalarni Ko'rish",       "callback_data":"todo_view"}],
+            [{"text":"🏠 Asosiy Menyu",              "callback_data":"main_menu"}],
         ]}
 
     def kb_after_tx(self):
         return {"inline_keyboard": [
-            [{"text":"\U0001f4b0 Daromad","callback_data":"journal_income"},
-             {"text":"\U0001f4b8 Xarajat","callback_data":"journal_expense"}],
-            [{"text":"\U0001f4d3 Kundalik","callback_data":"journal_menu"},
-             {"text":"\U0001f3e0 Asosiy",  "callback_data":"main_menu"}],
+            [{"text":"🟢 Daromad","callback_data":"journal_income"},
+             {"text":"🔴 Xarajat","callback_data":"journal_expense"}],
+            [{"text":"📝 Qayd",   "callback_data":"journal_note"},
+             {"text":"🏠 Asosiy", "callback_data":"main_menu"}],
         ]}
 
-    # ── Telegram API ──────────────────────────────────────────────────────    def set_webhook(self, url):
+    # ── Telegram API ──────────────────────────────────────────────────────
+    def set_webhook(self, url):
         try:
             r = requests.post(f"{self.base_url}/setWebhook",
                               data={'url': url, 'drop_pending_updates': True}, timeout=20)
@@ -565,11 +626,12 @@ class TelegramBot:
         except Exception as e:
             logger.warning(f"Webhook xato: {e}")
             return None
+
     def delete_webhook(self):
         try:
             r = requests.post(f"{self.base_url}/deleteWebhook",
                               data={'drop_pending_updates': False}, timeout=10)
-            if r.json().get('result'): logger.info("Webhook o'chirildi \u2705")
+            if r.json().get('result'): logger.info("Webhook o'chirildi ✅")
         except Exception as e: logger.warning(f"Webhook xato: {e}")
 
     def get_updates(self):
@@ -580,7 +642,7 @@ class TelegramBot:
             r.raise_for_status(); return r.json().get('result', [])
         except requests.exceptions.HTTPError as e:
             if e.response is not None and e.response.status_code == 409:
-                logger.warning("409 Conflict \u2014 webhook o'chirilmoqda...")
+                logger.warning("409 Conflict — webhook o'chirilmoqda...")
                 self.delete_webhook(); time.sleep(5)
             else: logger.error(f"get_updates HTTP xato: {e}")
             return []
@@ -606,14 +668,22 @@ class TelegramBot:
                           data={'callback_query_id': cbid}, timeout=10)
         except Exception as e: logger.error(f"answer_cb xato: {e}")
 
-    def send_doc(self, cid, buf, fname, caption=''):
+    def send_doc(self, cid, buf, fname, caption='', mime='application/octet-stream'):
         try:
             requests.post(f"{self.base_url}/sendDocument",
                           data={'chat_id': cid, 'caption': caption, 'parse_mode': 'Markdown'},
-                          files={'document': (fname, buf,
-                              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')},
+                          files={'document': (fname, buf, mime)},
                           timeout=30)
         except Exception as e: logger.error(f"send_doc xato: {e}")
+
+    def send_md_doc(self, cid, data, today=None):
+        if today is None:
+            today = get_today()
+        md_path, content = save_user_md_file(cid, data, today)
+        buf = io.BytesIO(content.encode('utf-8'))
+        fname = f"vazifalar_{today}.md"
+        caption = f"📄 *Vazifalar va Qaydlar (.md)*\n_{today}_"
+        self.send_doc(cid, buf, fname, caption=caption, mime='text/markdown')
 
     # ── Callback handler ──────────────────────────────────────────────────
     def handle_cb(self, update):
@@ -627,43 +697,51 @@ class TelegramBot:
         if cb == 'main_menu':
             self.clear_state(cid)
             self.edit_msg(cid, mid,
-                "\U0001f3e0 *Asosiy Menyu* \U0001f60a\n\nNima qilmoqchisiz?", self.kb_main())
+                "🏠 *Asosiy Menyu*\n\nKerakli bo'limni tanlang:", self.kb_main())
 
         elif cb == 'todo_menu':
             self.clear_state(cid)
             self.edit_msg(cid, mid,
-                "\U0001f4cb *Vazifalar Ro'yxati* \U0001f4aa\n\nNima qilmoqchisiz?", self.kb_todo())
+                "📋 *Vazifalar va Qaydlar (.md)*\n\nQuyidagi bo'limni tanlang yoki `.md` faylingizni yuklab oling:", self.kb_todo())
+            self.send_md_doc(cid, data)
+
+        elif cb == 'todo_download_md':
+            self.send_md_doc(cid, data)
+            self.edit_msg(cid, mid,
+                "📄 *Vazifalar (.md) fayli yuborildi!*", self.kb_todo())
 
         elif cb == 'todo_add':
             self.set_state(cid, self.STATE_TODO_ADD)
             self.edit_msg(cid, mid,
-                "\U0001f4dd *Vazifa Qo'shish* \u270d\ufe0f\n\n"
-                "Vazifangizni *yozing* \U0001f447\n\n"
-                "_Misol: Oziq-ovqat sotib olish_ \U0001f6d2\n"
-                "_Misol: Soat 18:00 da onaga qo'ng'iroq_ \U0001f4de")
+                "📝 *Vazifa / Qayd Qo'shish*\n\n"
+                "Vazifa yoki kunlik qaydingizni yozing 👇\n\n"
+                "_Misol: Bugungi loyihani tugatish_\n"
+                "_Misol: Soat 15:00 da uchrashuv_")
 
         elif cb == 'todo_view':
             bk = {"inline_keyboard": [
-                [{"text":"\u270f\ufe0f O'zgartirish","callback_data":"todo_changes"}],
-                [{"text":"\U0001f519 Orqaga",      "callback_data":"todo_menu"},
-                 {"text":"\U0001f3e0 Asosiy Menyu","callback_data":"main_menu"}],
+                [{"text":"📄 .md Faylni Yuklash","callback_data":"todo_download_md"}],
+                [{"text":"✏️ O'zgartirish",      "callback_data":"todo_changes"}],
+                [{"text":"⬅️ Orqaga",            "callback_data":"todo_menu"},
+                 {"text":"🏠 Asosiy Menyu",      "callback_data":"main_menu"}],
             ]}
             self.edit_msg(cid, mid, list_todos(data), bk)
+            self.send_md_doc(cid, data)
 
         elif cb == 'todo_changes':
             todos = data[get_today()]['todos']
             if not todos:
                 self.edit_msg(cid, mid,
-                    "\U0001f634 Hali vazifalar yo'q!\n\nBirinchi vazifangizni qo'sing \U0001f31f",
+                    "📋 Bugun hali vazifalar kiritilmadi.",
                     {"inline_keyboard": [
-                        [{"text":"\u2795 Vazifa Qo'shish","callback_data":"todo_add"}],
-                        [{"text":"\U0001f3e0 Asosiy Menyu","callback_data":"main_menu"}],
+                        [{"text":"➕ Vazifa Qo'shish","callback_data":"todo_add"}],
+                        [{"text":"🏠 Asosiy Menyu",   "callback_data":"main_menu"}],
                     ]})
             else:
                 self.edit_msg(cid, mid,
-                    "\u270f\ufe0f *O'zgartirish* \U0001f527\n\n"
-                    "Vazifani bosib *\u2705/\u2b1c o'zgartiring*\n"
-                    "*\U0001f5d1\ufe0f O'chir* tugmasini bosib o'chiring:",
+                    "✏️ *Vazifalarni Boshqarish*\n\n"
+                    "Holatni o'zgartirish uchun vazifani bosing (✅/⬜).\n"
+                    "O'chirish uchun 🗑️ tugmasini bosing:",
                     self.kb_changes(todos))
 
         elif cb.startswith('todo_toggle_'):
@@ -671,85 +749,87 @@ class TelegramBot:
             todos = data[today]['todos']
             if 1 <= num <= len(todos):
                 todos[num-1]['done'] = not todos[num-1]['done']; self.save(cid)
+                save_user_md_file(cid, data, today)
             self.edit_msg(cid, mid,
-                "\u270f\ufe0f *O'zgartirish* \U0001f527\n\n"
-                "Vazifani bosib *\u2705/\u2b1c o'zgartiring*\n"
-                "*\U0001f5d1\ufe0f O'chir* tugmasini bosib o'chiring:",
+                "✏️ *Vazifalarni Boshqarish*\n\n"
+                "Holatni o'zgartirish uchun vazifani bosing (✅/⬜).\n"
+                "O'chirish uchun 🗑️ tugmasini bosing:",
                 self.kb_changes(data[today]['todos']))
 
         elif cb.startswith('todo_del_'):
             num = int(cb.split('_')[2]); today = get_today()
             todos = data[today]['todos']
-            if 1 <= num <= len(todos): todos.pop(num-1); self.save(cid)
+            if 1 <= num <= len(todos):
+                todos.pop(num-1); self.save(cid)
+                save_user_md_file(cid, data, today)
             remaining = data[today]['todos']
             if remaining:
                 self.edit_msg(cid, mid,
-                    "\u270f\ufe0f *O'zgartirish* \U0001f527\n\n"
-                    "Vazifani bosib *\u2705/\u2b1c o'zgartiring*\n"
-                    "*\U0001f5d1\ufe0f O'chir* tugmasini bosib o'chiring:",
+                    "✏️ *Vazifalarni Boshqarish*\n\n"
+                    "Holatni o'zgartirish uchun vazifani bosing (✅/⬜).\n"
+                    "O'chirish uchun 🗑️ tugmasini bosing:",
                     self.kb_changes(remaining))
             else:
                 self.edit_msg(cid, mid,
-                    "\U0001f5d1\ufe0f Barcha vazifalar o'chirildi! \U0001f60c\n\n"
-                    "Yangi vazifa qo'shmoqchimisiz? \U0001f4aa",
+                    "🗑️ Barcha vazifalar o'chirildi.",
                     {"inline_keyboard": [
-                        [{"text":"\u2795 Vazifa Qo'shish","callback_data":"todo_add"}],
-                        [{"text":"\U0001f3e0 Asosiy Menyu","callback_data":"main_menu"}],
+                        [{"text":"➕ Vazifa Qo'shish","callback_data":"todo_add"}],
+                        [{"text":"🏠 Asosiy Menyu",   "callback_data":"main_menu"}],
                     ]})
 
         elif cb == 'journal_menu':
             self.clear_state(cid)
             self.edit_msg(cid, mid,
-                "\U0001f4d3 *Kundalik* \U0001f4b0\n\nNima qilmoqchisiz?", self.kb_journal())
+                "📝 *Kundalik / Qaydlar*\n\nKerakli bo'limni tanlang:", self.kb_journal())
 
         elif cb == 'journal_income':
             self.set_state(cid, self.STATE_JOURNAL_INCOME)
             self.edit_msg(cid, mid,
-                "\U0001f4b0 *Daromad Qo'shish* \U0001f929\n\n"
+                "🟢 *Daromad Qo'shish*\n\n"
                 "*Miqdor* va tavsifni yozing:\n\n"
                 "_Misollar:_\n"
-                "\u2022 `500000 maosh` \U0001f4bc\n"
-                "\u2022 `200000 freelance` \U0001f4bb\n"
-                "\u2022 `1000000 bonus` \U0001f381")
+                "• `500000 maosh`\n"
+                "• `200000 freelance`\n"
+                "• `1000000 bonus`")
 
         elif cb == 'journal_expense':
             self.set_state(cid, self.STATE_JOURNAL_EXPENSE)
             self.edit_msg(cid, mid,
-                "\U0001f4b8 *Xarajat Qo'shish* \U0001f605\n\n"
+                "🔴 *Xarajat Qo'shish*\n\n"
                 "*Miqdor* va tavsifni yozing:\n\n"
                 "_Misollar:_\n"
-                "\u2022 `50000 taksi` \U0001f695")
+                "• `50000 taksi`\n"
+                "• `120000 tushlik`")
 
         elif cb == 'journal_note':
             self.set_state(cid, self.STATE_JOURNAL_NOTE)
             self.edit_msg(cid, mid,
-                "\U0001f4dd *Eslatma Yozish* \u2728\n\n"
-                "Istalgan narsani yozing \u2014\n"
-                "*balansga hech narsa ta'sir qilmaydi* \U0001f60a\n\n"
+                "📝 *Eslatma / Qayd Yozish*\n\n"
+                "Istalgan qayd yoki eslatmani yozing:\n"
+                "_(Balans o'zgarmadi)_\n\n"
                 "_Misollar:_\n"
-                "\u2022 _20 so'mga kola ichdim_ \U0001f964\n"
-                "\u2022 _Bugungi tushlik juda mazali edi_ \U0001f60b\n"
-                "\u2022 _Do'stga 5000 berdim_ \U0001f91d")
+                "• _Bugungi majlis soat 15:00 da boshlandi_\n"
+                "• _Hujjatlar tayyorlandi_")
 
         elif cb == 'cmd_summary':
             self.edit_msg(cid, mid, show_summary(data), self.kb_back())
 
         elif cb == 'cmd_excel':
             self.edit_msg(cid, mid,
-                "\U0001f4e4 *Excel Yuklash* \U0001f4ca\n\nDavrni tanlang:",
+                "📁 *Excel Yuklash*\n\nDavrni tanlang:",
                 {"inline_keyboard": [
-                    [{"text":"\U0001f4c5 Bugun",       "callback_data":"excel_today"},
-                     {"text":"\U0001f4c6 Bu Hafta",    "callback_data":"excel_week"}],
-                    [{"text":"\U0001f5d3\ufe0f Bu Oy", "callback_data":"excel_month"},
-                     {"text":"\U0001f4da Hammasi",     "callback_data":"excel_all"}],
-                    [{"text":"\U0001f3e0 Asosiy Menyu","callback_data":"main_menu"}],
+                    [{"text":"📅 Bugun",       "callback_data":"excel_today"},
+                     {"text":"📅 Bu Hafta",    "callback_data":"excel_week"}],
+                    [{"text":"📅 Bu Oy",       "callback_data":"excel_month"},
+                     {"text":"📁 Hammasi",     "callback_data":"excel_all"}],
+                    [{"text":"🏠 Asosiy Menyu","callback_data":"main_menu"}],
                 ]})
 
         elif cb.startswith('excel_'):
             period = cb.split('_',1)[1]
             names  = {'today':'Bugun','week':'Bu Hafta','month':'Bu Oy','all':'Hammasi'}
             self.edit_msg(cid, mid,
-                f"\u23f3 *{names.get(period,period)}* uchun Excel tayyorlanmoqda\u2026 \U0001f4ca",
+                f"⏳ *{names.get(period,period)}* uchun Excel tayyorlanmoqda…",
                 self.kb_back())
             self.do_excel(cid, data, period)
 
@@ -769,24 +849,29 @@ class TelegramBot:
 
             if state == self.STATE_TODO_ADD:
                 self.clear_state(cid); ensure_today(data)
-                self.send_msg(cid, add_todo(text, data), self.kb_after_todo())
-                self.save(cid); return
+                res_msg = add_todo(text, data)
+                self.save(cid)
+                save_user_md_file(cid, data)
+                self.send_msg(cid, res_msg, self.kb_after_todo())
+                self.send_md_doc(cid, data)
+                return
 
             elif state == self.STATE_JOURNAL_INCOME:
                 self.clear_state(cid); ensure_today(data)
                 amount = parse_amount(text)
                 if not amount:
                     self.send_msg(cid,
-                        "\U0001f615 *Miqdor topilmadi!*\n\n"
-                        "_Raqam kiriting. Misol: `500000 maosh`_ \U0001f4b5",
+                        "⚠️ *Miqdor topilmadi!*\n\n"
+                        "_Raqam kiriting. Misol: `500000 maosh`_",
                         {"inline_keyboard": [
-                            [{"text":"\U0001f501 Qayta Urinish","callback_data":"journal_income"},
-                             {"text":"\U0001f3e0 Asosiy Menyu", "callback_data":"main_menu"}],
+                            [{"text":"🔄 Qayta Urinish","callback_data":"journal_income"},
+                             {"text":"🏠 Asosiy Menyu", "callback_data":"main_menu"}],
                         ]})
                 else:
                     self.send_msg(cid, add_transaction('income', amount, text, data),
                                   self.kb_after_tx())
                     self.save(cid)
+                    save_user_md_file(cid, data)
                 return
 
             elif state == self.STATE_JOURNAL_EXPENSE:
@@ -794,16 +879,17 @@ class TelegramBot:
                 amount = parse_amount(text)
                 if not amount:
                     self.send_msg(cid,
-                        "\U0001f615 *Miqdor topilmadi!*\n\n"
-                        "_Raqam kiriting. Misol: `20000 hot-dog`_ \U0001f32d",
+                        "⚠️ *Miqdor topilmadi!*\n\n"
+                        "_Raqam kiriting. Misol: `20000 tushlik`_",
                         {"inline_keyboard": [
-                            [{"text":"\U0001f501 Qayta Urinish","callback_data":"journal_expense"},
-                             {"text":"\U0001f3e0 Asosiy Menyu", "callback_data":"main_menu"}],
+                            [{"text":"🔄 Qayta Urinish","callback_data":"journal_expense"},
+                             {"text":"🏠 Asosiy Menyu", "callback_data":"main_menu"}],
                         ]})
                 else:
                     self.send_msg(cid, add_transaction('expense', amount, text, data),
                                   self.kb_after_tx())
                     self.save(cid)
+                    save_user_md_file(cid, data)
                 return
 
             elif state == self.STATE_JOURNAL_NOTE:
@@ -814,13 +900,15 @@ class TelegramBot:
                     'timestamp': datetime.datetime.now().isoformat(),
                 })
                 self.save(cid)
+                save_user_md_file(cid, data, today)
                 self.send_msg(cid,
-                    f"\U0001f4dd *Eslatma saqlandi!* \u2728\n\n_{text}_\n\n"
-                    "\U0001f49a _(Balans o'zgarmadi \u2014 bu shunchaki yodgorlik)_",
+                    f"📝 *Eslatma saqlandi!*\n\n_{text}_\n\n"
+                    "_(Balans o'zgarmadi)_",
                     {"inline_keyboard": [
-                        [{"text":"\U0001f4dd Yana Eslatma","callback_data":"journal_note"}],
-                        [{"text":"\U0001f4d3 Kundalik",    "callback_data":"journal_menu"},
-                         {"text":"\U0001f3e0 Asosiy",      "callback_data":"main_menu"}],
+                        [{"text":"📝 Yana Qayd Yozish","callback_data":"journal_note"},
+                         {"text":"📄 .md Yuklash",     "callback_data":"todo_download_md"}],
+                        [{"text":"📝 Kundalik",        "callback_data":"journal_menu"},
+                         {"text":"🏠 Asosiy",          "callback_data":"main_menu"}],
                     ]})
                 return
 
@@ -847,37 +935,51 @@ class TelegramBot:
         elif cmd in ('/todo','/vazifa'):
             task = text.split(' ',1)[1].strip() if ' ' in text else ''
             if not task:
-                return ("\U0001f60a Vazifani kiriting:\n"
-                        "`/vazifa Oziq-ovqat sotib olish`\n\n"
-                        "Yoki /menu ni oching")
-            ensure_today(data); r = add_todo(task, data); self.save(cid); return r
-        elif cmd == '/todos': return list_todos(data)
+                self.send_md_doc(cid, data)
+                return ("📋 Vazifa yoki qaydingizni kiriting:\n"
+                        "`/vazifa Loyihani yakunlash`\n\n"
+                        "Yoki menyudan tanlang: /menu")
+            ensure_today(data); r = add_todo(task, data); self.save(cid)
+            save_user_md_file(cid, data)
+            self.send_md_doc(cid, data)
+            return r
+        elif cmd in ('/todos', '/vazifalar'):
+            self.send_md_doc(cid, data)
+            return list_todos(data)
         elif cmd == '/done':
             parts = text.split()
             if len(parts) < 2 or not parts[1].isdigit():
-                return "\U0001f60a Foydalanish: `/done <raqam>`\nMisol: `/done 1`"
+                return "ℹ️ Foydalanish: `/done <raqam>`\nMisol: `/done 1`"
             ensure_today(data); r = complete_todo(int(parts[1]), data)
-            self.save(cid); return r
+            self.save(cid)
+            save_user_md_file(cid, data)
+            return r
         elif cmd == '/deltodo':
             parts = text.split()
             if len(parts) < 2 or not parts[1].isdigit():
-                return "\U0001f60a Foydalanish: `/deltodo <raqam>`"
+                return "ℹ️ Foydalanish: `/deltodo <raqam>`"
             ensure_today(data); r = delete_todo(int(parts[1]), data)
-            self.save(cid); return r
+            self.save(cid)
+            save_user_md_file(cid, data)
+            return r
         elif cmd in ('/income','/daromad'):
             rest   = text.split(' ',1)[1].strip() if ' ' in text else ''
             amount = parse_amount(rest)
-            if not amount: return "\U0001f60a Foydalanish: `/daromad 500000 maosh`"
+            if not amount: return "ℹ️ Foydalanish: `/daromad 500000 maosh`"
             ensure_today(data)
             r = add_transaction('income', amount, rest or 'Daromad', data)
-            self.save(cid); return r
+            self.save(cid)
+            save_user_md_file(cid, data)
+            return r
         elif cmd in ('/expense','/xarajat'):
             rest   = text.split(' ',1)[1].strip() if ' ' in text else ''
             amount = parse_amount(rest)
-            if not amount: return "\U0001f60a Foydalanish: `/xarajat 20000 hot-dog`"
+            if not amount: return "ℹ️ Foydalanish: `/xarajat 20000 taksi`"
             ensure_today(data)
             r = add_transaction('expense', amount, rest or 'Xarajat', data)
-            self.save(cid); return r
+            self.save(cid)
+            save_user_md_file(cid, data)
+            return r
         else: return self.nlp(text, cid, data)
 
     def nlp(self, text, cid, data):
@@ -885,31 +987,35 @@ class TelegramBot:
         if amount is None:
             if is_todo_message(text):
                 ensure_today(data); r = add_todo(text, data)
-                self.save(cid); return r
+                self.save(cid)
+                save_user_md_file(cid, data)
+                self.send_md_doc(cid, data)
+                return r
             return (
-                "\U0001f914 *Hmm, tushunmadim...*\n\n"
-                "Xavotir olmang! Mana misollar:\n\n"
-                "\U0001f4b8 _hot-dog uchun 20000 to'ladim_ \U0001f32d\n"
-                "\U0001f4b0 _maosh 5000000 oldim_ \U0001f4bc\n"
-                "\U0001f4cb _ertaga universitetga borish kerak_ \U0001f393\n\n"
-                "Yoki menyuni oching: /menu \U0001f60a"
+                "⚠️ *Noma'lum buyruq.* Mana misollar:\n\n"
+                "• _taksi uchun 20000 to'ladim_\n"
+                "• _maosh 5000000 oldim_\n"
+                "• _ertaga majlisga borish kerak_\n\n"
+                "Yoki menyuni oching: /menu"
             )
         ensure_today(data); r = add_transaction(tx_type, amount, desc, data)
-        self.save(cid); return r
+        self.save(cid)
+        save_user_md_file(cid, data)
+        return r
 
     # ── Excel sender ──────────────────────────────────────────────────────
     def do_excel(self, cid, data, period):
         if not EXCEL_AVAILABLE:
             self.send_msg(cid,
-                "\u274c openpyxl o'rnatilmagan.\nBajaring: `pip install openpyxl`")
+                "❌ openpyxl o'rnatilmagan.\nBajaring: `pip install openpyxl`")
             return
         buf, err = generate_excel(data, period)
-        if err: self.send_msg(cid, f"\u274c {err}"); return
+        if err: self.send_msg(cid, f"❌ {err}"); return
         today  = get_today()
         names  = {'today':'bugun','week':'hafta','month':'oy','all':'hammasi'}
         fname  = f"hisobot_{names.get(period,period)}_{today}.xlsx"
-        caption = f"\U0001f4ca *Excel Hisobot* \U0001f389 \u2014 {period}\n_{today}_"
-        self.send_doc(cid, buf, fname, caption)
+        caption = f"📊 *Excel Hisobot* — {period}\n_{today}_"
+        self.send_doc(cid, buf, fname, caption, mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         logger.info(f"Excel yuborildi: {fname}")
 
     # ── /start ────────────────────────────────────────────────────────────
@@ -919,36 +1025,32 @@ class TelegramBot:
             today = ensure_today(data)
             bal   = data[today]['balance']
             sign  = '+' if bal >= 0 else ''
-            bal_e = '\U0001f60d' if bal >= 0 else '\U0001f630'
             return (
-                f"\U0001f389 *Kunlik Moliya Botiga xush kelibsiz!* \U0001f31f\n\n"
-                f"\u2696\ufe0f Bugungi balansiz: *{sign}{bal:,.0f} so'm* {bal_e}\n\n"
-                "Quyidagi tugmalardan birini bosing \U0001f447",
+                f"📋 *Kunlik Moliya va Vazifalar Boti*\n\n"
+                f"⚖️ Bugungi balans: *{sign}{bal:,.0f} so'm*\n\n"
+                "Quyidagi bo'limlardan birini tanlang 👇",
                 self.kb_main()
             )
-        return "Boshlash uchun /start bosing. \U0001f60a"
+        return "Boshlash uchun /start bosing."
 
     def cmd_help(self):
         return (
-            "\U0001f4d6 *Barcha Buyruqlar* \U0001f60a\n\n"
-            "\u2501\u2501\u2501\u2501 \U0001f3e0 *Menyu* \u2501\u2501\u2501\u2501\n"
-            "  `/menu` yoki `/start` \u2014 Asosiy menyuni ochish\n\n"
-            "\u2501\u2501\u2501\u2501 \U0001f4b0 *Pul* \u2501\u2501\u2501\u2501\n"
-            "Tabiiy tilda:\n"
-            "  _hot-dog uchun 20000 to'ladim_ \U0001f32d\n"
-            "  _maosh 5000000 oldim_ \U0001f4bc\n\n"
-            "Yoki buyruqlar:\n"
-            "  `/xarajat 20000 hot-dog`\n"
+            "📖 *Barcha Buyruqlar*\n\n"
+            "━━━━ 🏠 *Menyu* ━━━━\n"
+            "  `/menu` yoki `/start` — Asosiy menyu\n\n"
+            "━━━━ 💰 *Moliya* ━━━━\n"
+            "  _taksi uchun 20000 to'ladim_\n"
+            "  _maosh 5000000 oldim_\n"
+            "  `/xarajat 20000 taksi`\n"
             "  `/daromad 500000 maosh`\n\n"
-            "\u2501\u2501\u2501\u2501 \U0001f4cb *Vazifalar* \u2501\u2501\u2501\u2501\n"
-            "  `/vazifa <matn>` \u2014 Qo'shish \u270d\ufe0f\n"
-            "  `/todos` \u2014 Ko'rish \U0001f440\n"
-            "  `/done <n>` \u2014 Bajarildi \u2705\n"
-            "  `/deltodo <n>` \u2014 O'chirish \U0001f5d1\ufe0f\n\n"
-            "\u2501\u2501\u2501\u2501 \U0001f4ca *Hisobotlar* \u2501\u2501\u2501\u2501\n"
+            "━━━━ 📋 *Vazifalar & Qaydlar (.md)* ━━━━\n"
+            "  `/vazifa <matn>` — Qo'shish\n"
+            "  `/todos` — Vazifalarni ko'rish va .md yuklash\n"
+            "  `/done <n>` — Bajarildi deb belgilash\n"
+            "  `/deltodo <n>` — O'chirish\n\n"
+            "━━━━ 📊 *Hisobotlar* ━━━━\n"
             "  `/hisobot` | `/hafta` | `/oy`\n"
-            "  `/excel` \u2014 Excel (bugun) \U0001f4e5\n"
-            "  `/excel week` / `/excel all`\n"
+            "  `/excel` — Excel yuklash\n"
         )
 
     # ── Run loop ──────────────────────────────────────────────────────────
@@ -958,9 +1060,8 @@ class TelegramBot:
         logger.info("Bot ishlamoqda... To'xtatish uchun Ctrl+C bosing.")
         self.send_msg(
             TELEGRAM_CHAT_ID,
-            "\U0001f680 *Bot ishga tushdi!* \U0001f389\n\n"
-            "Salom! Men sizning moliyaviy yordamchingizman! \U0001f60a\n\n"
-            "Menyuni ochish uchun /menu bosing \U0001f447",
+            "✅ *Bot ishga tushdi.*\n\n"
+            "Menyuni ochish uchun /menu bosing 👇",
             self.kb_main()
         )
         while True:
@@ -969,7 +1070,7 @@ class TelegramBot:
                 for upd in updates: self.handle_message(upd)
                 time.sleep(0.5)
             except KeyboardInterrupt:
-                logger.info("Bot to'xtatildi. Xayr! \U0001f44b"); break
+                logger.info("Bot to'xtatildi. Xayr!"); break
             except Exception as e:
                 logger.error(f"Bot loop xato: {e}"); time.sleep(5)
 

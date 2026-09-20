@@ -18,6 +18,19 @@ app = Flask(__name__)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID   = os.getenv('TELEGRAM_CHAT_ID')
 
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+
+supabase_client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        from supabase import create_client
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info("Supabase mijozi muvaffaqiyatli ulangan ✅")
+    except Exception as e:
+        logger.warning(f"Supabase ulanishida xato: {e}")
+        supabase_client = None
+
 telegram_bot = None
 
 
@@ -125,23 +138,49 @@ def parse_natural_language(text):
 def is_todo_message(text):
     return any(kw in text.lower() for kw in TODO_KEYWORDS)
 
-# ── Per-User Data ───────────────────────────────────────────────────────────
+# ── Per-User Data (Supabase + Local Backup) ──────────────────────────────────
 def _user_file(cid):
     return os.path.join(DATA_DIR, f'{cid}.json')
 
 def load_user_data(cid):
-    path = _user_file(cid)
+    cid_str = str(cid)
+    if supabase_client is not None:
+        try:
+            res = supabase_client.table('user_data').select('data').eq('chat_id', cid_str).execute()
+            if res.data and len(res.data) > 0:
+                user_data = res.data[0].get('data', {})
+                if isinstance(user_data, dict):
+                    return user_data
+        except Exception as e:
+            logger.warning(f"Supabase'dan yuklashda xato ({cid_str}): {e}. Fayldan yuklanmoqda...")
+
+    path = _user_file(cid_str)
     if os.path.exists(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            logger.warning(f"Fayl buzilgan ({cid}), yangidan boshlanmoqda.")
+            logger.warning(f"Fayl buzilgan ({cid_str}), yangidan boshlanmoqda.")
     return {}
 
 def save_user_data(cid, data):
-    with open(_user_file(cid), 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    cid_str = str(cid)
+    path = _user_file(cid_str)
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.warning(f"Faylga saqlashda xato: {e}")
+
+    if supabase_client is not None:
+        try:
+            supabase_client.table('user_data').upsert({
+                'chat_id': cid_str,
+                'data': data,
+                'updated_at': datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }).execute()
+        except Exception as e:
+            logger.warning(f"Supabase'ga saqlashda xato ({cid_str}): {e}")
 
 def get_today():
     return datetime.date.today().strftime('%Y-%m-%d')

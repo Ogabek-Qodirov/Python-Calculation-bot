@@ -13,10 +13,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ── Logging (must be set up before anything else that uses logger) ────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID   = os.getenv('TELEGRAM_CHAT_ID')
+WEBHOOK_URL        = os.getenv('WEBHOOK_URL')  # e.g. https://yourapp.vercel.app
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
@@ -87,11 +95,7 @@ try:
 except ImportError:
     EXCEL_AVAILABLE = False
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# (logging already configured at module top)
 
 DATA_DIR = 'user_data'
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -721,11 +725,12 @@ class TelegramBot:
         self.base_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
         logger.info("Bot ishga tushdi ✅")
 
-    STATE_IDLE            = 'idle'
-    STATE_TODO_ADD        = 'todo_add'
-    STATE_JOURNAL_INCOME  = 'journal_income'
-    STATE_JOURNAL_EXPENSE = 'journal_expense'
-    STATE_JOURNAL_NOTE    = 'journal_note'
+    STATE_IDLE             = 'idle'
+    STATE_TODO_ADD         = 'todo_add'
+    STATE_JOURNAL_INCOME   = 'journal_income'
+    STATE_JOURNAL_EXPENSE  = 'journal_expense'
+    STATE_JOURNAL_NOTE     = 'journal_note'
+    STATE_TX_EDIT_AMOUNT   = 'tx_edit_amount'   # waiting for new amount input
 
     def get_state(self, c): return self.user_states.get(c, self.STATE_IDLE)
     def set_state(self, c, s): self.user_states[c] = s
@@ -771,6 +776,7 @@ class TelegramBot:
             [{"text":"🟢 Daromad Qo'shish (+)",       "callback_data":"journal_income"},
              {"text":"🔴 Xarajat Qo'shish (−)",      "callback_data":"journal_expense"}],
             [{"text":"📝 Qayd Yozish",                "callback_data":"journal_note"}],
+            [{"text":"✏️ Amallarni Tahrirlash",       "callback_data":"tx_manage"}],
             [{"text":"📄 Qaydlar.md Yuklash",         "callback_data":"journal_download_md"}],
             [{"text":"🏠 Asosiy Menyu",               "callback_data":"main_menu"}],
         ]}
@@ -800,6 +806,25 @@ class TelegramBot:
 
     def kb_back(self):
         return {"inline_keyboard": [[{"text":"🏠 Asosiy Menyu","callback_data":"main_menu"}]]}
+
+    def kb_tx_manage(self, txs):
+        """Keyboard listing today's income/expense transactions for edit/delete."""
+        rows = []
+        for i, tx in enumerate(txs):
+            if tx.get('type') == 'note':
+                continue
+            icon  = '🟢' if tx.get('type') == 'income' else '🔴'
+            amt   = tx.get('amount', 0)
+            desc  = tx.get('description', '')
+            label = f"{icon} {i+1}. {amt:,.0f} — {desc[:15]}{'…' if len(desc)>15 else ''}"
+            rows.append([
+                {"text": label,           "callback_data": f"tx_info_{i}"},
+                {"text": "✏️ Tahrir",     "callback_data": f"tx_edit_{i}"},
+                {"text": "🗑️ O'chir",    "callback_data": f"tx_del_{i}"},
+            ])
+        rows.append([{"text": "⬅️ Orqaga", "callback_data": "journal_menu"},
+                     {"text": "🏠 Asosiy",  "callback_data": "main_menu"}])
+        return {"inline_keyboard": rows}
 
     def kb_after_todo(self):
         return {"inline_keyboard": [
@@ -1050,6 +1075,104 @@ class TelegramBot:
         elif cb == 'cmd_summary':
             self.edit_msg(cid, mid, show_summary(data), self.kb_back())
 
+        # ── Transaction manage menu ────────────────────────────────────────
+        elif cb == 'tx_manage':
+            self.clear_state(cid)
+            today = get_today()
+            txs   = data.get(today, {}).get('transactions', [])
+            real  = [tx for tx in txs if tx.get('type') != 'note']
+            if not real:
+                self.edit_msg(cid, mid,
+                    "📭 Bugun hali daromad yoki xarajat kiritilmadi.",
+                    {"inline_keyboard": [
+                        [{"text":"🟢 Daromad Qo'shish", "callback_data":"journal_income"}],
+                        [{"text":"🔴 Xarajat Qo'shish", "callback_data":"journal_expense"}],
+                        [{"text":"🏠 Asosiy Menyu",      "callback_data":"main_menu"}],
+                    ]})
+            else:
+                self.edit_msg(cid, mid,
+                    "✏️ *Amallarni Tahrirlash / O'chirish*\n\n"
+                    "Tahrirlash yoki o'chirish uchun amallardan birini tanlang:",
+                    self.kb_tx_manage(txs))
+
+        elif cb.startswith('tx_info_'):
+            idx   = int(cb.split('_')[2])
+            today = get_today()
+            txs   = data.get(today, {}).get('transactions', [])
+            if 0 <= idx < len(txs):
+                tx   = txs[idx]
+                icon = '🟢' if tx.get('type') == 'income' else '🔴'
+                self.edit_msg(cid, mid,
+                    f"{icon} *{idx+1}-amal ma'lumoti*\n"
+                    f"💵 Miqdor: *{tx.get('amount',0):,.0f} so'm*\n"
+                    f"📝 Tavsif: _{tx.get('description','')}_ \n\n"
+                    "Quyidagi amallardan birini tanlang:",
+                    {"inline_keyboard": [
+                        [{"text":"✏️ Miqdorni Tahrirlash", "callback_data":f"tx_edit_{idx}"},
+                         {"text":"🗑️ O'chirish",           "callback_data":f"tx_del_{idx}"}],
+                        [{"text":"⬅️ Orqaga",              "callback_data":"tx_manage"}],
+                    ]})
+
+        elif cb.startswith('tx_edit_'):
+            idx = int(cb.split('_')[2])
+            today = get_today()
+            txs   = data.get(today, {}).get('transactions', [])
+            if 0 <= idx < len(txs):
+                tx = txs[idx]
+                # Store which tx index we are editing in user_states dict
+                self.user_states[cid] = self.STATE_TX_EDIT_AMOUNT
+                # We store the index so the message handler can find it
+                if not hasattr(self, '_edit_tx_idx'):
+                    self._edit_tx_idx = {}
+                self._edit_tx_idx[cid] = idx
+                self.edit_msg(cid, mid,
+                    f"✏️ *{idx+1}-amal miqdorini o'zgartirish*\n\n"
+                    f"Hozirgi miqdor: *{tx.get('amount',0):,.0f} so'm*\n"
+                    f"Tavsif: _{tx.get('description','')}_\n\n"
+                    "Yangi miqdorni yozing (faqat raqam):\n"
+                    "_Misol: `350000`_")
+
+        elif cb.startswith('tx_del_'):
+            idx   = int(cb.split('_')[2])
+            today = get_today()
+            txs   = data.get(today, {}).get('transactions', [])
+            if 0 <= idx < len(txs):
+                tx      = txs[idx]
+                tx_type = tx.get('type', 'expense')
+                amount  = tx.get('amount', 0)
+                # Reverse the effect on totals
+                if tx_type == 'income':
+                    data[today]['total_income']  -= amount
+                    data[today]['balance']        -= amount
+                elif tx_type == 'expense':
+                    data[today]['total_expense'] -= amount
+                    data[today]['balance']        += amount
+                txs.pop(idx)
+                self.save(cid)
+                save_user_md_file(cid, data)
+                remaining = [t for t in data[today]['transactions'] if t.get('type') != 'note']
+                icon = '🟢' if tx_type == 'income' else '🔴'
+                bal  = data[today]['balance']
+                sign = '+' if bal >= 0 else ''
+                if remaining:
+                    self.edit_msg(cid, mid,
+                        f"🗑️ *Amal o'chirildi!*\n"
+                        f"{icon} {amount:,.0f} so'm — _{tx.get('description','')}_\n\n"
+                        f"⚖️ Yangi balans: *{sign}{bal:,.0f} so'm*\n\n"
+                        "Boshqa amallarni ham boshqaring:",
+                        self.kb_tx_manage(data[today]['transactions']))
+                else:
+                    self.edit_msg(cid, mid,
+                        f"🗑️ *Amal o'chirildi!*\n"
+                        f"{icon} {amount:,.0f} so'm — _{tx.get('description','')}_\n\n"
+                        f"⚖️ Yangi balans: *{sign}{bal:,.0f} so'm*\n\n"
+                        "📭 Bugun boshqa amallar yo'q.",
+                        {"inline_keyboard": [
+                            [{"text":"🟢 Daromad Qo'shish", "callback_data":"journal_income"}],
+                            [{"text":"🔴 Xarajat Qo'shish", "callback_data":"journal_expense"}],
+                            [{"text":"🏠 Asosiy Menyu",      "callback_data":"main_menu"}],
+                        ]})
+
         elif cb == 'cmd_excel':
             self.edit_msg(cid, mid,
                 "📁 *Excel Yuklash*\n\nDavrni tanlang:",
@@ -1089,6 +1212,54 @@ class TelegramBot:
                 self.save(cid)
                 save_user_md_file(cid, data)
                 self.send_msg(cid, res_msg, self.kb_after_todo())
+                return
+
+            elif state == self.STATE_TX_EDIT_AMOUNT:
+                self.clear_state(cid)
+                edit_idx = getattr(self, '_edit_tx_idx', {}).get(cid)
+                today    = ensure_today(data)
+                txs      = data[today]['transactions']
+                if edit_idx is None or edit_idx >= len(txs):
+                    self.send_msg(cid, "⚠️ Amal topilmadi.", self.kb_back())
+                    return
+                new_amount = parse_amount(text)
+                if not new_amount:
+                    self.send_msg(cid,
+                        "⚠️ *Miqdor topilmadi!*\n\n"
+                        "_Faqat raqam kiriting. Misol: `350000`_",
+                        {"inline_keyboard": [
+                            [{"text":"🔄 Qayta Urinish", "callback_data":f"tx_edit_{edit_idx}"},
+                             {"text":"🏠 Asosiy Menyu", "callback_data":"main_menu"}],
+                        ]})
+                    return
+                tx          = txs[edit_idx]
+                tx_type     = tx.get('type', 'expense')
+                old_amount  = tx.get('amount', 0)
+                # Update running totals
+                diff = new_amount - old_amount
+                if tx_type == 'income':
+                    data[today]['total_income'] += diff
+                    data[today]['balance']       += diff
+                elif tx_type == 'expense':
+                    data[today]['total_expense'] += diff
+                    data[today]['balance']        -= diff
+                tx['amount'] = new_amount
+                self.save(cid)
+                save_user_md_file(cid, data)
+                bal  = data[today]['balance']
+                sign = '+' if bal >= 0 else ''
+                icon = '🟢' if tx_type == 'income' else '🔴'
+                self.send_msg(cid,
+                    f"✅ *Miqdor yangilandi!*\n\n"
+                    f"{icon} Eski miqdor: *{old_amount:,.0f} so'm*\n"
+                    f"{icon} Yangi miqdor: *{new_amount:,.0f} so'm*\n"
+                    f"📝 _{tx.get('description','')}_\n\n"
+                    f"⚖️ Yangi balans: *{sign}{bal:,.0f} so'm*",
+                    {"inline_keyboard": [
+                        [{"text":"✏️ Boshqa Amallar", "callback_data":"tx_manage"}],
+                        [{"text":"📊 Hisobot",         "callback_data":"cmd_summary"},
+                         {"text":"🏠 Asosiy",          "callback_data":"main_menu"}],
+                    ]})
                 return
 
             elif state == self.STATE_JOURNAL_INCOME:
@@ -1306,8 +1477,20 @@ def main():
         sys.exit(1)
     global telegram_bot
     telegram_bot = TelegramBot()
-    threading.Thread(target=run_server, daemon=True).start()
-    telegram_bot.run()
+
+    if WEBHOOK_URL:
+        # ── Webhook mode: Flask server handles updates, NO polling loop ──────
+        # Register/set the webhook URL with Telegram
+        wh_url = build_webhook_url(WEBHOOK_URL, TELEGRAM_BOT_TOKEN)
+        telegram_bot.set_webhook(wh_url)
+        logger.info(f"Webhook rejimida ishlamoqda: {wh_url}")
+        # Flask server runs in the main thread (blocking)
+        run_server()
+    else:
+        # ── Polling mode: delete any old webhook, then long-poll ─────────────
+        # Flask server is NOT started to avoid duplicate processing
+        logger.info("Polling rejimida ishlamoqda (webhook yo'q)...")
+        telegram_bot.run()
 
 if __name__ == '__main__':
     main()

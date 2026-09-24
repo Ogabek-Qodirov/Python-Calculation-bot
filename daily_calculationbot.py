@@ -27,7 +27,12 @@ TELEGRAM_CHAT_ID   = os.getenv('TELEGRAM_CHAT_ID')
 WEBHOOK_URL        = os.getenv('WEBHOOK_URL')  # e.g. https://yourapp.vercel.app
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+# Accept legacy publishable key OR the service_role JWT (SUPABASE_SERVICE_KEY takes priority)
+SUPABASE_KEY = (
+    os.getenv('SUPABASE_SERVICE_KEY')  # service_role JWT — bypasses RLS
+    or os.getenv('SUPABASE_KEY')
+    or os.getenv('SUPABASE_ANON_KEY')
+)
 
 supabase_client = None
 if SUPABASE_URL and SUPABASE_KEY:
@@ -63,6 +68,25 @@ def build_webhook_url(base_url, token):
 @app.route('/')
 def home():
     return "I'm alive!"
+
+
+@app.route('/debug')
+def debug():
+    status = {
+        'supabase_connected': supabase_client is not None,
+        'supabase_url': SUPABASE_URL,
+        'key_prefix': SUPABASE_KEY[:20] + '...' if SUPABASE_KEY else None,
+        'webhook_url': WEBHOOK_URL,
+    }
+    if supabase_client is not None:
+        try:
+            res = supabase_client.table('user_data').select('chat_id,updated_at').execute()
+            status['rows'] = len(res.data)
+            status['chat_ids'] = [r['chat_id'] for r in res.data]
+        except Exception as e:
+            status['supabase_error'] = str(e)
+    from flask import jsonify
+    return jsonify(status)
 
 
 def register_webhook_route():

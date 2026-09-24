@@ -722,6 +722,7 @@ class TelegramBot:
         self.user_cache     = {}
         self.user_states    = {}
         self.last_update_id = 0
+        self._edit_tx_idx   = {}   # cid -> transaction index being edited
         self.base_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
         logger.info("Bot ishga tushdi ✅")
 
@@ -808,7 +809,9 @@ class TelegramBot:
         return {"inline_keyboard": [[{"text":"🏠 Asosiy Menyu","callback_data":"main_menu"}]]}
 
     def kb_tx_manage(self, txs):
-        """Keyboard listing today's income/expense transactions for edit/delete."""
+        """Keyboard listing today's income/expense transactions for edit/delete.
+        Uses the *real* index in the txs list so notes in between don't break lookups.
+        """
         rows = []
         for i, tx in enumerate(txs):
             if tx.get('type') == 'note':
@@ -816,11 +819,11 @@ class TelegramBot:
             icon  = '🟢' if tx.get('type') == 'income' else '🔴'
             amt   = tx.get('amount', 0)
             desc  = tx.get('description', '')
-            label = f"{icon} {i+1}. {amt:,.0f} — {desc[:15]}{'…' if len(desc)>15 else ''}"
+            label = f"{icon} {amt:,.0f} — {desc[:18]}{'…' if len(desc) > 18 else ''}"
             rows.append([
-                {"text": label,           "callback_data": f"tx_info_{i}"},
-                {"text": "✏️ Tahrir",     "callback_data": f"tx_edit_{i}"},
-                {"text": "🗑️ O'chir",    "callback_data": f"tx_del_{i}"},
+                {"text": label,          "callback_data": f"tx_info_{i}"},
+                {"text": "✏️ Tahrir",    "callback_data": f"tx_edit_{i}"},
+                {"text": "🗑️ O'chir",   "callback_data": f"tx_del_{i}"},
             ])
         rows.append([{"text": "⬅️ Orqaga", "callback_data": "journal_menu"},
                      {"text": "🏠 Asosiy",  "callback_data": "main_menu"}])
@@ -1114,16 +1117,12 @@ class TelegramBot:
                     ]})
 
         elif cb.startswith('tx_edit_'):
-            idx = int(cb.split('_')[2])
+            idx   = int(cb.split('_')[2])
             today = get_today()
             txs   = data.get(today, {}).get('transactions', [])
             if 0 <= idx < len(txs):
                 tx = txs[idx]
-                # Store which tx index we are editing in user_states dict
-                self.user_states[cid] = self.STATE_TX_EDIT_AMOUNT
-                # We store the index so the message handler can find it
-                if not hasattr(self, '_edit_tx_idx'):
-                    self._edit_tx_idx = {}
+                self.user_states[cid]  = self.STATE_TX_EDIT_AMOUNT
                 self._edit_tx_idx[cid] = idx
                 self.edit_msg(cid, mid,
                     f"✏️ *{idx+1}-amal miqdorini o'zgartirish*\n\n"
@@ -1197,7 +1196,8 @@ class TelegramBot:
         if 'callback_query' in update:
             self.handle_cb(update); return
         try:
-            msg  = update.get('message') or update.get('edited_message')
+            # Only process NEW messages — ignore edited_message to prevent double replies
+            msg = update.get('message')
             if not msg: return
             cid  = msg['chat']['id']
             text = msg.get('text','').strip()

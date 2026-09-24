@@ -876,10 +876,14 @@ class TelegramBot:
         except requests.exceptions.HTTPError as e:
             if e.response is not None and e.response.status_code == 409:
                 logger.warning("409 Conflict — webhook o'chirilmoqda...")
-                self.delete_webhook(); time.sleep(5)
-            else: logger.error(f"get_updates HTTP xato: {e}")
+                self.delete_webhook()
+                time.sleep(3)   # short wait then retry once
+            else:
+                logger.error(f"get_updates HTTP xato: {e}")
             return []
-        except Exception as e: logger.error(f"get_updates xato: {e}"); return []
+        except Exception as e:
+            logger.error(f"get_updates xato: {e}")
+            return []
 
     def send_msg(self, cid, text, kb=None):
         try:
@@ -1479,18 +1483,23 @@ def main():
     telegram_bot = TelegramBot()
 
     if WEBHOOK_URL:
-        # ── Webhook mode: Flask server handles updates, NO polling loop ──────
-        # Register/set the webhook URL with Telegram
+        # ── Webhook mode ──────────────────────────────────────────────────────
+        # Telegram sends updates directly to our Flask endpoint.
         wh_url = build_webhook_url(WEBHOOK_URL, TELEGRAM_BOT_TOKEN)
         telegram_bot.set_webhook(wh_url)
         logger.info(f"Webhook rejimida ishlamoqda: {wh_url}")
-        # Flask server runs in the main thread (blocking)
-        run_server()
     else:
-        # ── Polling mode: delete any old webhook, then long-poll ─────────────
-        # Flask server is NOT started to avoid duplicate processing
+        # ── Polling mode ──────────────────────────────────────────────────────
+        # Run polling in a background daemon thread so Flask can still start.
+        # Render / Railway / Heroku require a bound port or they kill the process.
         logger.info("Polling rejimida ishlamoqda (webhook yo'q)...")
-        telegram_bot.run()
+        poll_thread = threading.Thread(target=telegram_bot.run, daemon=True)
+        poll_thread.start()
+
+    # ── Always start Flask ────────────────────────────────────────────────────
+    # In webhook mode  → Flask receives Telegram updates via POST.
+    # In polling mode  → Flask only serves the "/" health-check (port stays open).
+    run_server()
 
 if __name__ == '__main__':
     main()

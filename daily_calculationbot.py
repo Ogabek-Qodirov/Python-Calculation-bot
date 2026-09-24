@@ -777,7 +777,7 @@ class TelegramBot:
             [{"text":"🟢 Daromad Qo'shish (+)",       "callback_data":"journal_income"},
              {"text":"🔴 Xarajat Qo'shish (−)",      "callback_data":"journal_expense"}],
             [{"text":"📝 Qayd Yozish",                "callback_data":"journal_note"}],
-            [{"text":"✏️ Amallarni Tahrirlash",       "callback_data":"tx_manage"}],
+            [{"text":"✏️ Pul miqdorini tahrirlash",   "callback_data":"tx_manage"}],
             [{"text":"📄 Qaydlar.md Yuklash",         "callback_data":"journal_download_md"}],
             [{"text":"🏠 Asosiy Menyu",               "callback_data":"main_menu"}],
         ]}
